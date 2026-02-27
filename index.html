@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FacilityOS</title>
+<style>
+:root {
+  --bg:#0a0c10; --s1:#111318; --s2:#181c24; --s3:#1e2330;
+  --b1:#252b38; --b2:#2e3547;
+  --t1:#e8ecf4; --t2:#8b93a8; --t3:#555e72;
+  --blue:#3b82f6; --blue2:#60a5fa;
+  --green:#22c55e; --yellow:#f59e0b; --red:#ef4444;
+  --orange:#f97316; --purple:#a855f7; --teal:#14b8a6;
+  --fh:'Syne',sans-serif; --fb:'IBM Plex Sans',sans-serif; --fm:'IBM Plex Mono',monospace;
+}
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--t1);font-family:var(--fb);font-size:14px;line-height:1.5;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--s1);}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px;}
+
+/* LAYOUT */
+#app{display:flex;height:100dvh;}
+#sidebar{width:220px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;overflow:hidden;transition:width 0.2s;}
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.page-content{flex:1;overflow-y:auto;padding:24px;}
+
+/* SIDEBAR */
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid var(--b1);}
+.logo-name{font-family:var(--fh);font-size:1.2rem;font-weight:800;letter-spacing:-0.02em;}
+.logo-name span{color:var(--blue);}
+.logo-sub{font-size:0.6rem;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-top:2px;}
+.nav{flex:1;overflow-y:auto;padding:10px 8px;}
+.nav-sec{font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--t3);padding:10px 10px 4px;font-family:var(--fm);}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:6px;cursor:pointer;color:var(--t2);font-size:0.82rem;border:none;background:none;width:100%;text-align:left;position:relative;transition:all 0.15s;}
+.nav-btn:hover{background:var(--s2);color:var(--t1);}
+.nav-btn.active{background:rgba(59,130,246,0.12);color:var(--blue2);}
+.nav-btn.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--blue);border-radius:0 2px 2px 0;}
+.nav-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:0.58rem;font-family:var(--fm);padding:1px 5px;border-radius:10px;min-width:16px;text-align:center;}
+.nav-badge.y{background:var(--yellow);color:#1a1000;}
+.sb-foot{padding:10px 8px;border-top:1px solid var(--b1);font-size:0.68rem;color:var(--t3);text-align:center;font-family:var(--fm);}
+
+/* TOPBAR */
+#topbar{background:var(--s1);border-bottom:1px solid var(--b1);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.page-title{font-family:var(--fh);font-size:1.05rem;font-weight:700;}
+.topbar-acts{display:flex;gap:8px;align-items:center;}
+
+/* PILLS */
+.pill{padding:3px 10px;border-radius:20px;font-size:0.67rem;font-family:var(--fm);font-weight:500;letter-spacing:0.04em;display:inline-block;}
+.pill-blue{background:rgba(59,130,246,0.15);color:var(--blue2);}
+.pill-green{background:rgba(34,197,94,0.15);color:var(--green);}
+.pill-yellow{background:rgba(245,158,11,0.15);color:var(--yellow);}
+.pill-red{background:rgba(239,68,68,0.15);color:var(--red);}
+.pill-orange{background:rgba(249,115,22,0.15);color:var(--orange);}
+.pill-purple{background:rgba(168,85,247,0.15);color:var(--purple);}
+
+/* STAT CARDS */
+.stats-row{display:grid;gap:12px;margin-bottom:20px;}
+.stats-4{grid-template-columns:repeat(4,1fr);}
+.stats-3{grid-template-columns:repeat(3,1fr);}
+.stats-2{grid-template-columns:1fr 1fr;}
+.stat-card{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:16px;position:relative;overflow:hidden;}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+.sc-blue::after{background:var(--blue);}
+.sc-green::after{background:var(--green);}
+.sc-yellow::after{background:var(--yellow);}
+.sc-red::after{background:var(--red);}
+.sc-orange::after{background:var(--orange);}
+.sc-purple::after{background:var(--purple);}
+.stat-lbl{font-size:0.66rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;font-family:var(--fm);margin-bottom:6px;}
+.stat-val{font-family:var(--fh);font-size:1.9rem;font-weight:800;line-height:1;}
+.sv-blue{color:var(--blue2);}
+.sv-green{color:var(--green);}
+.sv-yellow{color:var(--yellow);}
+.sv-red{color:var(--red);}
+.sv-orange{color:var(--orange);}
+.sv-purple{color:var(--purple);}
+.stat-sub{font-size:0.68rem;color:var(--t3);margin-top:4px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:6px;font-family:var(--fb);font-size:0.8rem;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all 0.15s;white-space:nowrap;text-decoration:none;}
+.btn:active{transform:scale(0.97);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-pri{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-pri:hover:not(:disabled){background:#2563eb;}
+.btn-sec{background:var(--s2);color:var(--t1);border-color:var(--b2);}
+.btn-sec:hover:not(:disabled){background:var(--s3);}
+.btn-danger{background:rgba(239,68,68,0.12);color:var(--red);border-color:rgba(239,68,68,0.3);}
+.btn-danger:hover:not(:disabled){background:rgba(239,68,68,0.22);}
+.btn-success{background:rgba(34,197,94,0.12);color:var(--green);border-color:rgba(34,197,94,0.3);}
+.btn-success:hover:not(:disabled){background:rgba(34,197,94,0.22);}
+.btn-warn{background:rgba(245,158,11,0.12);color:var(--yellow);border-color:rgba(245,158,11,0.3);}
+.btn-warn:hover:not(:disabled){background:rgba(245,158,11,0.22);}
+.btn-sm{padding:5px 10px;font-size:0.73rem;}
+.btn-xs{padding:3px 8px;font-size:0.68rem;}
+
+/* FORMS */
+.fg{margin-bottom:14px;}
+.flbl{display:block;font-size:0.7rem;color:var(--t2);margin-bottom:5px;font-family:var(--fm);text-transform:uppercase;letter-spacing:0.06em;}
+.finput,.fsel,.ftxt{width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:8px 11px;color:var(--t1);font-family:var(--fb);font-size:0.82rem;outline:none;transition:border-color 0.15s;}
+.finput:focus,.fsel:focus,.ftxt:focus{border-color:var(--blue);}
+.fsel option{background:var(--s2);}
+.ftxt{resize:vertical;min-height:80px;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--b1);}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--s2);padding:9px 12px;text-align:left;font-size:0.66rem;font-family:var(--fm);text-transform:uppercase;letter-spacing:0.08em;color:var(--t3);border-bottom:1px solid var(--b1);white-space:nowrap;}
+td{padding:9px 12px;border-bottom:1px solid var(--b1);font-size:0.78rem;color:var(--t2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.015);}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn 0.15s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--s1);border:1px solid var(--b2);border-radius:12px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;animation:slideUp 0.2s ease;}
+.modal-wide{max-width:760px;}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-hd{padding:18px 20px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-family:var(--fh);font-size:1rem;font-weight:700;}
+.modal-body{padding:20px;}
+.modal-ft{padding:14px 20px;border-top:1px solid var(--b1);display:flex;gap:8px;justify-content:flex-end;}
+.modal-close{background:none;border:none;color:var(--t3);cursor:pointer;font-size:1.2rem;padding:4px;border-radius:4px;transition:all 0.15s;}
+.modal-close:hover{color:var(--t1);background:var(--s2);}
+
+/* ALERTS */
+.alert{padding:10px 14px;border-radius:6px;font-size:0.78rem;margin-bottom:10px;line-height:1.6;}
+.al-warn{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:#fbbf24;}
+.al-danger{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#f87171;}
+.al-success{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:#4ade80;}
+.al-info{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:var(--blue2);}
+
+/* CHECKLIST */
+.cl-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--b1);border-radius:6px;margin-bottom:6px;cursor:pointer;transition:all 0.15s;background:var(--s2);}
+.cl-item:hover{border-color:var(--b2);background:var(--s3);}
+.cl-item.done{border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.05);}
+.cl-box{width:18px;height:18px;border:2px solid var(--b2);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-size:0.7rem;}
+.cl-box.done{background:var(--green);border-color:var(--green);color:#fff;font-weight:700;}
+.cl-lbl{flex:1;font-size:0.8rem;}
+.cl-lbl.done{color:var(--t3);text-decoration:line-through;}
+.cl-crit{font-size:0.6rem;color:var(--red);font-family:var(--fm);margin-left:auto;flex-shrink:0;}
+
+/* PROGRESS */
+.prog-bar{background:var(--s2);border-radius:4px;height:6px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:4px;transition:width 0.4s ease;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--b1);margin-bottom:20px;gap:2px;}
+.tab-btn{padding:8px 16px;font-size:0.78rem;color:var(--t3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;white-space:nowrap;font-family:var(--fb);}
+.tab-btn:hover{color:var(--t2);}
+.tab-btn.active{color:var(--blue2);border-bottom-color:var(--blue);}
+
+/* SECTION HEADER */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+.sec-title{font-family:var(--fh);font-size:1rem;font-weight:700;}
+
+/* SEARCH */
+.search{background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:7px 12px 7px 32px;color:var(--t1);font-size:0.8rem;outline:none;width:200px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23555e72' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center;background-size:15px;transition:border-color 0.15s;}
+.search:focus{border-color:var(--blue);}
+
+/* EMPTY STATE */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--t3);text-align:center;gap:10px;}
+.empty-icon{font-size:2.5rem;opacity:0.4;}
+
+/* FLOOR PLAN */
+.fp-wrap{position:relative;border:1px solid var(--b2);border-radius:8px;overflow:hidden;background:var(--s2);min-height:320px;cursor:crosshair;}
+.fp-pin{position:absolute;transform:translate(-50%,-100%);cursor:pointer;z-index:10;}
+.pin-body{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.5);}
+.pin-body span{transform:rotate(45deg);font-size:0.6rem;}
+
+/* DOWNTIME */
+.dt-display{font-family:var(--fm);font-size:1.4rem;color:var(--red);font-weight:500;letter-spacing:0.05em;}
+
+/* CARD */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:16px;}
+.card-hd{font-size:0.72rem;font-family:var(--fm);text-transform:uppercase;letter-spacing:0.1em;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  #sidebar{width:54px;}
+  #sidebar .logo-sub,.nav-btn .nav-lbl,.nav-sec,.sb-foot{display:none;}
+  .nav-btn{justify-content:center;padding:10px;}
+  .stats-4,.stats-3{grid-template-columns:1fr 1fr;}
+  .frow,.frow3{grid-template-columns:1fr;}
+  .page-content{padding:14px;}
+  .search{width:140px;}
+}
+@media(max-width:480px){
+  #sidebar{display:none;}
+  .g2,.stats-2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div class="sb-logo">
+      <div class="logo-name">Facility<span>OS</span></div>
+      <div class="logo-sub">Operations Platform</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-sec">Modules</div>
+      <button class="nav-btn active" onclick="navigate('dashboard')" id="nav-dashboard">
+        <span class="nav-icon">⚡</span><span class="nav-lbl">Dashboard</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('assets')" id="nav-assets">
+        <span class="nav-icon">🏷️</span><span class="nav-lbl">Asset Management</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('wsh')" id="nav-wsh">
+        <span class="nav-icon">🦺</span><span class="nav-lbl">WSH Safety</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('maintenance')" id="nav-maintenance">
+        <span class="nav-icon">🔧</span><span class="nav-lbl">Maintenance</span>
+        <span class="nav-badge" id="badge-maint" style="display:none">0</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('firstaid')" id="nav-firstaid">
+        <span class="nav-icon">🩹</span><span class="nav-lbl">First Aid</span>
+        <span class="nav-badge y" id="badge-fa" style="display:none">0</span>
+      </button>
+    </nav>
+    <div class="sb-foot">v1.0</div>
+  </div>
+
+  <div id="main">
+    <div id="topbar">
+      <div class="page-title" id="page-title">Operations Dashboard</div>
+      <div class="topbar-acts" id="topbar-acts"></div>
+    </div>
+    <div class="page-content" id="page-root"></div>
+  </div>
+</div>
+
+<!-- MODAL CONTAINER -->
+<div id="modal-container"></div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────
+let DB = {
+  assets: [
+    {id:'A001',tag:'FIN-2023-001',name:'Server Dell PowerEdge R740',serial:'SN1234567',model:'PowerEdge R740',location:'Server Room B1',floor:'B1',cost:18500,nbv:12200,category:'IT',status:'Active',vendor:'Dell Singapore',maintenanceDate:'2025-06-15',contractExpiry:'2026-03-01',pinX:35,pinY:45,photo:null,faultyDate:null},
+    {id:'A002',tag:'FIN-2023-002',name:'Air Conditioner Daikin 2.5HP',serial:'DAK9876543',model:'FTXF25C',location:'Office Level 3',floor:'L3',cost:3200,nbv:2100,category:'Facilities',status:'Active',vendor:'Daikin SG',maintenanceDate:'2025-04-20',contractExpiry:'2025-12-31',pinX:60,pinY:30,photo:null,faultyDate:null},
+    {id:'A003',tag:'FIN-2023-003',name:'Photocopier Canon iR3530',serial:'CAN-555-8899',model:'iR3530',location:'Print Room L2',floor:'L2',cost:5800,nbv:2900,category:'Office',status:'Faulty',vendor:'Canon SG',maintenanceDate:'2025-03-10',contractExpiry:'2025-09-30',pinX:50,pinY:55,photo:null,faultyDate:new Date(Date.now()-172800000).toISOString()},
+    {id:'A004',tag:'FIN-2024-001',name:'Laptop Dell XPS 15',serial:'DLX990001',model:'XPS 9530',location:'HR Dept L4',floor:'L4',cost:3500,nbv:3200,category:'IT',status:'Active',vendor:'Dell Singapore',maintenanceDate:'2026-01-01',contractExpiry:'2027-01-01',pinX:70,pinY:65,photo:null,faultyDate:null},
+    {id:'A005',tag:'FIN-2024-002',name:'Industrial Shredder Fellowes',serial:'FS-331-2024',model:'Powershred 225Ci',location:'Admin Level 1',floor:'L1',cost:1200,nbv:1000,category:'Office',status:'Active',vendor:'Fellowes Asia',maintenanceDate:'2025-07-01',contractExpiry:'2026-07-01',pinX:25,pinY:70,photo:null,faultyDate:null},
+  ],
+  wshChecked: {daily:{},monthly:{},yearly:{}},
+  wshHistory: [],
+  firstAid: [
+    {id:'fa1',name:'Adhesive Bandages (Box of 100)',qty:3,minQty:2,expiry:'2026-03-01',location:'Cabinet L1'},
+    {id:'fa2',name:'Sterile Gauze Pads 10x10cm',qty:2,minQty:3,expiry:'2025-09-15',location:'Cabinet L1'},
+    {id:'fa3',name:'Antiseptic Solution (Dettol 1L)',qty:1,minQty:2,expiry:'2025-04-30',location:'Cabinet L1'},
+    {id:'fa4',name:'Triangular Bandage',qty:4,minQty:2,expiry:'2027-01-01',location:'Cabinet L3'},
+    {id:'fa5',name:'Eye Wash Solution 500ml',qty:2,minQty:2,expiry:'2025-06-30',location:'Cabinet L3'},
+    {id:'fa6',name:'CPR Face Shield',qty:3,minQty:2,expiry:'2026-08-01',location:'Cabinet L1'},
+    {id:'fa7',name:'Burn Gel Sachets',qty:0,minQty:3,expiry:'2025-12-01',location:'Cabinet L3'},
+    {id:'fa8',name:'Disposable Gloves (Box)',qty:5,minQty:3,expiry:'2026-12-01',location:'Cabinet L1'},
+    {id:'fa9',name:'Elastic Bandage 5cm',qty:2,minQty:3,expiry:'2026-07-15',location:'Cabinet L3'},
+    {id:'fa10',name:'Paracetamol 500mg (Strips)',qty:10,minQty:5,expiry:'2025-08-01',location:'Cabinet L1'},
+  ],
+  teamsWebhook: '',
+  floorplan: null,
+  contracts: [],
+};
+
+const WSH = {
+  daily:[
+    {id:'d1',text:'Inspect emergency exits — clear and accessible',crit:true},
+    {id:'d2',text:'Check fire extinguishers — not blocked or tampered',crit:true},
+    {id:'d3',text:'Ensure walkways free of hazards and tripping risks',crit:false},
+    {id:'d4',text:'Verify electrical panels not obstructed',crit:true},
+    {id:'d5',text:'Check wet floor signage availability at pantry',crit:false},
+    {id:'d6',text:'Inspect first aid kits — accessible and sealed',crit:true},
+    {id:'d7',text:'Confirm lighting adequate in all work areas',crit:false},
+    {id:'d8',text:'Check toilet facilities — soap and paper towels stocked',crit:false},
+    {id:'d9',text:'Verify hazardous materials properly stored and labelled',crit:true},
+    {id:'d10',text:'Check all equipment safety guards in place',crit:true},
+  ],
+  monthly:[
+    {id:'m1',text:'Fire drill simulation completed',crit:true},
+    {id:'m2',text:'MSDS (Safety Data Sheets) updated and accessible',crit:true},
+    {id:'m3',text:'First aid box inventory checked and replenished',crit:true},
+    {id:'m4',text:'Chemical storage reviewed for proper segregation',crit:true},
+    {id:'m5',text:'Emergency contact list reviewed and updated',crit:false},
+    {id:'m6',text:'All incident reports for the month reviewed',crit:true},
+    {id:'m7',text:'Electrical equipment PAT testing records reviewed',crit:true},
+    {id:'m8',text:'Staff safety training attendance reviewed',crit:false},
+    {id:'m9',text:'Noise level monitoring conducted',crit:false},
+    {id:'m10',text:'Ergonomic assessments for new staff completed',crit:false},
+  ],
+  yearly:[
+    {id:'y1',text:'MOM WSH audit preparation completed',crit:true},
+    {id:'y2',text:'Fire Safety Certificate renewed',crit:true},
+    {id:'y3',text:'WSH Officer appointment letter renewed',crit:true},
+    {id:'y4',text:'Annual workplace safety review conducted',crit:true},
+    {id:'y5',text:'All staff WSH training certificates renewed',crit:true},
+    {id:'y6',text:'Chemical inventory annual review',crit:true},
+    {id:'y7',text:'Emergency evacuation routes reviewed and updated',crit:false},
+    {id:'y8',text:'Workplace risk assessment (RA) reviewed',crit:true},
+    {id:'y9',text:'BizSAFE renewal status confirmed',crit:true},
+    {id:'y10',text:'Insurance coverage review for workplace incidents',crit:false},
+  ],
+};
+
+// ─── STORAGE ───────────────────────────────────────────────
+async function dbLoad(){
+  if(!window.storage) return;
+  try{
+    const r=await window.storage.get('facilityos-db');
+    if(r){const d=JSON.parse(r.value);Object.assign(DB,d);}
+  }catch(e){}
+}
+async function dbSave(){
+  if(!window.storage) return;
+  try{ await window.storage.set('facilityos-db',JSON.stringify(DB)); }catch(e){}
+}
+
+// ─── UTILS ─────────────────────────────────────────────────
+function daysUntil(d){if(!d)return 9999;return Math.ceil((new Date(d)-new Date())/86400000);}
+function fmtDate(d){if(!d)return '—';return new Date(d).toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric'});}
+function fmtMoney(n){return Number(n||0).toLocaleString('en-SG',{style:'currency',currency:'SGD',maximumFractionDigits:0});}
+function downtimeStr(iso){
+  if(!iso)return null;
+  const s=Math.floor((Date.now()-new Date(iso))/1000);
+  return `${Math.floor(s/86400)}d ${Math.floor((s%86400)/3600)}h ${Math.floor((s%3600)/60)}m`;
+}
+function statusColor(s){return{Active:'green','Under Maintenance':'yellow',Faulty:'red',Disposed:'purple',Withdrawn:'orange'}[s]||'blue';}
+function faStatus(item){
+  const days=daysUntil(item.expiry);
+  if(item.qty===0||days<=0)return'Critical';
+  if(days<=60)return'Expiring';
+  if(item.qty<item.minQty)return'Low';
+  return'OK';
+}
+function faColor(s){return{OK:'green',Low:'yellow',Expiring:'orange',Critical:'red'}[s]||'blue';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ─── ROUTING ───────────────────────────────────────────────
+let currentPage='dashboard';
+function navigate(page){
+  currentPage=page;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const nb=document.getElementById('nav-'+page);
+  if(nb)nb.classList.add('active');
+  const titles={dashboard:'Operations Dashboard',assets:'Asset Management',wsh:'Workplace Safety & Health',maintenance:'Maintenance & Downtime',firstaid:'First Aid Inventory'};
+  document.getElementById('page-title').textContent=titles[page]||page;
+  updateBadges();
+  const root=document.getElementById('page-root');
+  root.innerHTML='';
+  if(page==='dashboard')renderDashboard(root);
+  else if(page==='assets')renderAssets(root);
+  else if(page==='wsh')renderWSH(root);
+  else if(page==='maintenance')renderMaintenance(root);
+  else if(page==='firstaid')renderFirstAid(root);
+}
+
+function updateBadges(){
+  const faulty=DB.assets.filter(a=>a.status==='Faulty').length;
+  const bm=document.getElementById('badge-maint');
+  if(bm){bm.textContent=faulty;bm.style.display=faulty>0?'':'none';}
+  const faAlerts=DB.firstAid.filter(i=>faStatus(i)!=='OK').length;
+  const bf=document.getElementById('badge-fa');
+  if(bf){bf.textContent=faAlerts;bf.style.display=faAlerts>0?'':'none';}
+  // topbar pills
+  const ta=document.getElementById('topbar-acts');
+  let html=`<span class="pill pill-blue">${new Date().toLocaleDateString('en-SG',{day:'2-digit',month:'short'})}</span>`;
+  if(faulty>0) html=`<span class="pill pill-red">⚠ ${faulty} Faulty</span>`+html;
+  const mDue=DB.assets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=30).length;
+  if(mDue>0) html=`<span class="pill pill-yellow">🔧 ${mDue} Due</span>`+html;
+  ta.innerHTML=html;
+}
+
+// ─── MODAL ─────────────────────────────────────────────────
+function showModal(title,bodyHtml,footerHtml,wide){
+  const mc=document.getElementById('modal-container');
+  mc.innerHTML=`<div class="modal-ov" id="modal-ov" onclick="if(event.target===this)closeModal()">
+    <div class="modal${wide?' modal-wide':''}">
+      <div class="modal-hd">
+        <div class="modal-title">${esc(title)}</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body">${bodyHtml}</div>
+      ${footerHtml?`<div class="modal-ft">${footerHtml}</div>`:''}
+    </div>
+  </div>`;
+}
+function closeModal(){document.getElementById('modal-container').innerHTML='';}
+
+// ─── DASHBOARD ─────────────────────────────────────────────
+function renderDashboard(root){
+  const faulty=DB.assets.filter(a=>a.status==='Faulty');
+  const mDue=DB.assets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=30);
+  const cExp=DB.assets.filter(a=>a.contractExpiry&&daysUntil(a.contractExpiry)<=90);
+  const faAlerts=DB.firstAid.filter(i=>{const s=faStatus(i);return s==='Critical'||s==='Expiring';});
+  const totalNBV=DB.assets.reduce((s,a)=>s+Number(a.nbv||0),0);
+
+  let alerts='';
+  faulty.forEach(a=>{alerts+=`<div class="alert al-danger">🔴 <strong>${esc(a.name)}</strong> (${esc(a.tag)}) is FAULTY — Down for <strong>${downtimeStr(a.faultyDate)||'just reported'}</strong> · ${esc(a.location)}</div>`;});
+  faAlerts.forEach(i=>{const s=faStatus(i);alerts+=`<div class="alert al-danger">🩹 First Aid: <strong>${esc(i.name)}</strong> — ${s} · ${esc(i.location)}</div>`;});
+
+  root.innerHTML=`
+  <div style="margin-bottom:24px">
+    <div style="font-family:var(--fh);font-size:1.5rem;font-weight:800;line-height:1">Operations Dashboard</div>
+    <div style="color:var(--t3);font-size:0.78rem;margin-top:4px">${new Date().toLocaleDateString('en-SG',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+  </div>
+  ${alerts?`<div style="margin-bottom:20px">${alerts}</div>`:''}
+  <div class="stats-row stats-4">
+    <div class="stat-card sc-blue"><div class="stat-lbl">Total Assets</div><div class="stat-val sv-blue">${DB.assets.length}</div><div class="stat-sub">Registered</div></div>
+    <div class="stat-card sc-red"><div class="stat-lbl">Faulty Now</div><div class="stat-val sv-red">${faulty.length}</div><div class="stat-sub">Needs repair</div></div>
+    <div class="stat-card sc-yellow"><div class="stat-lbl">Maint. Due (30d)</div><div class="stat-val sv-yellow">${mDue.length}</div><div class="stat-sub">Upcoming</div></div>
+    <div class="stat-card sc-orange"><div class="stat-lbl">Contracts Expiring</div><div class="stat-val sv-orange">${cExp.length}</div><div class="stat-sub">Within 90 days</div></div>
+  </div>
+  <div class="g2" style="margin-top:0">
+    <div class="card">
+      <div class="card-hd">Maintenance Due — 30 Days</div>
+      ${mDue.length===0?`<div style="color:var(--t3);font-size:0.78rem">No maintenance due this month ✓</div>`
+        :mDue.slice(0,5).map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--b1);font-size:0.78rem">
+          <div><div style="color:var(--t1);font-weight:500">${esc(a.name)}</div><div style="color:var(--t3);font-size:0.68rem">${esc(a.location)}</div></div>
+          <span class="pill pill-${daysUntil(a.maintenanceDate)<=7?'red':'yellow'}">${daysUntil(a.maintenanceDate)}d</span>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-hd">First Aid Status</div>
+      ${DB.firstAid.slice(0,7).map(i=>{
+        const s=faStatus(i);
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--b1);font-size:0.75rem">
+          <div style="color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px">${esc(i.name)}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <span style="color:var(--t3);font-family:var(--fm);font-size:0.68rem">Qty:${i.qty}</span>
+            <span class="pill pill-${faColor(s)}">${s}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+// ─── ASSETS ────────────────────────────────────────────────
+let assetView='list', assetSearch='', assetFilter='All', placingPin=false, pinTarget=null;
+
+function renderAssets(root){
+  const faulty=DB.assets.filter(a=>a.status==='Faulty');
+  const upcoming=DB.assets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=60&&daysUntil(a.maintenanceDate)>=0);
+  const totalNBV=DB.assets.reduce((s,a)=>s+Number(a.nbv||0),0);
+
+  root.innerHTML=`
+  ${faulty.length>0?`<div class="alert al-danger">⚠ ${faulty.length} asset(s) currently marked FAULTY: ${faulty.map(a=>esc(a.name)).join(', ')}</div>`:''}
+  ${upcoming.length>0?`<div class="alert al-warn">🔧 ${upcoming.length} asset(s) have maintenance due within 60 days</div>`:''}
+  <div class="stats-row stats-4">
+    <div class="stat-card sc-blue"><div class="stat-lbl">Total Assets</div><div class="stat-val sv-blue">${DB.assets.length}</div><div class="stat-sub">Registered</div></div>
+    <div class="stat-card sc-green"><div class="stat-lbl">Active</div><div class="stat-val sv-green">${DB.assets.filter(a=>a.status==='Active').length}</div><div class="stat-sub">In service</div></div>
+    <div class="stat-card sc-red"><div class="stat-lbl">Faulty</div><div class="stat-val sv-red">${faulty.length}</div><div class="stat-sub">Needs attention</div></div>
+    <div class="stat-card sc-yellow"><div class="stat-lbl">Total NBV</div><div class="stat-val sv-yellow" style="font-size:1.1rem">${fmtMoney(totalNBV)}</div><div class="stat-sub">Net book value</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn ${assetView==='list'?'active':''}" onclick="setAssetView('list')">📋 Asset Register</button>
+    <button class="tab-btn ${assetView==='floor'?'active':''}" onclick="setAssetView('floor')">🗺️ Floor Plan</button>
+  </div>
+  <div id="asset-view-content"></div>`;
+
+  renderAssetView();
+}
+
+function setAssetView(v){assetView=v;renderAssets(document.getElementById('page-root'));}
+
+function renderAssetView(){
+  const el=document.getElementById('asset-view-content');
+  if(!el) return;
+  if(assetView==='list') renderAssetList(el);
+  else renderFloorPlan(el);
+}
+
+function renderAssetList(el){
+  const filtered=DB.assets.filter(a=>{
+    const q=assetSearch.toLowerCase();
+    const mQ=!q||a.name.toLowerCase().includes(q)||a.tag.toLowerCase().includes(q)||(a.serial||'').toLowerCase().includes(q)||(a.location||'').toLowerCase().includes(q);
+    return mQ&&(assetFilter==='All'||a.status===assetFilter);
+  });
+
+  el.innerHTML=`
+  <div class="sec-hd">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input class="search" placeholder="Search assets..." value="${esc(assetSearch)}" oninput="assetSearch=this.value;renderAssetView()">
+      <select class="fsel" style="width:auto;padding:7px 10px;font-size:0.78rem" onchange="assetFilter=this.value;renderAssetView()">
+        ${['All','Active','Faulty','Under Maintenance','Disposed','Withdrawn'].map(s=>`<option ${assetFilter===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <label class="btn btn-sec btn-sm" style="cursor:pointer">📤 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importCSV(this)"></label>
+      <button class="btn btn-pri btn-sm" onclick="openAssetModal(null)">+ Add Asset</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Finance Tag</th><th>Asset Name</th><th>Serial</th><th>Location</th><th>Cost</th><th>NBV</th><th>Next Maint.</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    ${filtered.length===0?`<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--t3)">No assets found</td></tr>`
+    :filtered.map(a=>{
+      const dc=daysUntil(a.maintenanceDate);
+      const sc=statusColor(a.status);
+      return`<tr>
+        <td><span style="font-family:var(--fm);font-size:0.7rem;color:var(--blue2)">${esc(a.tag)}</span></td>
+        <td><div style="font-weight:500;color:var(--t1)">${esc(a.name)}</div><div style="font-size:0.67rem;color:var(--t3)">${esc(a.model||'')}</div></td>
+        <td style="font-family:var(--fm);font-size:0.7rem">${esc(a.serial||'')}</td>
+        <td>${esc(a.location||'')}</td>
+        <td style="font-family:var(--fm)">${fmtMoney(a.cost)}</td>
+        <td style="font-family:var(--fm)">${fmtMoney(a.nbv)}</td>
+        <td>${a.maintenanceDate?`<span class="pill pill-${dc<=30?'red':dc<=60?'yellow':'green'}">${fmtDate(a.maintenanceDate)}</span>`:'—'}</td>
+        <td>${a.status==='Faulty'&&a.faultyDate?`<span class="pill pill-red">Faulty</span><div class="dt-display" style="font-size:0.7rem;margin-top:2px">${downtimeStr(a.faultyDate)}</div>`:`<span class="pill pill-${sc}">${esc(a.status)}</span>`}</td>
+        <td>
+          <div style="display:flex;gap:3px">
+            <button class="btn btn-xs btn-sec" onclick="viewAsset('${a.id}')">👁️</button>
+            <button class="btn btn-xs btn-sec" onclick="openAssetModal('${a.id}')">✏️</button>
+            ${a.status==='Faulty'?`<button class="btn btn-xs btn-success" onclick="clearFault('${a.id}')">✓Fix</button>`:`<button class="btn btn-xs btn-danger" onclick="markFaulty('${a.id}')">⚠️</button>`}
+            <button class="btn btn-xs btn-warn" onclick="openDisposal('${a.id}')">↗W/D</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>
+  </div>`;
+}
+
+function renderFloorPlan(el){
+  el.innerHTML=`
+  <div class="sec-hd">
+    <div>
+      <div class="sec-title">Interactive Floor Plan</div>
+      <div style="font-size:0.72rem;color:var(--t3);margin-top:2px">Click a pin to view asset. Use buttons below to position assets.</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      ${placingPin?`<span class="pill pill-yellow">🎯 Click map to place: ${esc(pinTarget?.name||'')}</span>`:''}
+      <label class="btn btn-sec btn-sm" style="cursor:pointer">🗺️ Upload Floor Plan<input type="file" accept="image/*" style="display:none" onchange="uploadFloorplan(this)"></label>
+    </div>
+  </div>
+  <div class="fp-wrap" style="height:420px" id="fp-map" onclick="handleFPClick(event)">
+    ${DB.floorplan?`<img src="${DB.floorplan}" style="width:100%;height:100%;object-fit:contain;display:block">`
+    :`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:8px"><div style="font-size:2.5rem">🏢</div><div style="font-size:0.8rem">Upload a floor plan image to start placing asset pins</div></div>`}
+    ${DB.assets.filter(a=>a.pinX!=null&&a.pinY!=null).map(a=>{
+      const colors={Active:'#22c55e',Faulty:'#ef4444','Under Maintenance':'#f59e0b',Disposed:'#a855f7',Withdrawn:'#f97316'};
+      const c=colors[a.status]||'#3b82f6';
+      return`<div class="fp-pin" style="left:${a.pinX}%;top:${a.pinY}%" onclick="event.stopPropagation();viewAsset('${a.id}')" title="${esc(a.tag)} — ${esc(a.name)}">
+        <div class="pin-body" style="background:${c}"><span>📍</span></div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+    ${[['Active','#22c55e'],['Faulty','#ef4444'],['Under Maintenance','#f59e0b'],['Other','#3b82f6']].map(([s,c])=>`<div style="display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--t2)"><div style="width:10px;height:10px;border-radius:50%;background:${c}"></div>${s}</div>`).join('')}
+  </div>
+  <div style="margin-top:16px">
+    <div class="card-hd">Place Assets on Map</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+      ${DB.assets.map(a=>`<button class="btn btn-xs ${pinTarget?.id===a.id?'btn-pri':'btn-sec'}" onclick="startPlacePin('${a.id}')">📍 ${esc(a.tag)}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function startPlacePin(id){
+  pinTarget=DB.assets.find(a=>a.id===id)||null;
+  placingPin=!!pinTarget;
+  renderFloorPlan(document.getElementById('asset-view-content'));
+}
+
+function handleFPClick(e){
+  if(!placingPin||!pinTarget)return;
+  const rect=e.currentTarget.getBoundingClientRect();
+  const x=((e.clientX-rect.left)/rect.width*100).toFixed(1);
+  const y=((e.clientY-rect.top)/rect.height*100).toFixed(1);
+  DB.assets=DB.assets.map(a=>a.id===pinTarget.id?{...a,pinX:parseFloat(x),pinY:parseFloat(y)}:a);
+  dbSave(); placingPin=false; pinTarget=null;
+  renderFloorPlan(document.getElementById('asset-view-content'));
+}
+
+function uploadFloorplan(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{DB.floorplan=ev.target.result;dbSave();renderFloorPlan(document.getElementById('asset-view-content'));};
+  r.readAsDataURL(f);
+}
+
+function markFaulty(id){
+  DB.assets=DB.assets.map(a=>a.id===id?{...a,status:'Faulty',faultyDate:new Date().toISOString()}:a);
+  dbSave();updateBadges();renderAssets(document.getElementById('page-root'));
+}
+function clearFault(id){
+  DB.assets=DB.assets.map(a=>a.id===id?{...a,status:'Active',faultyDate:null}:a);
+  dbSave();updateBadges();renderAssets(document.getElementById('page-root'));
+}
+
+function viewAsset(id){
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;
+  const dc=a.maintenanceDate?daysUntil(a.maintenanceDate):null;
+  showModal(a.name,`
+  ${a.status==='Faulty'&&a.faultyDate?`<div class="alert al-danger">⚠ Faulty since ${fmtDate(a.faultyDate)} — Down for <strong>${downtimeStr(a.faultyDate)}</strong></div>`:''}
+  <div class="frow">
+    <div><div class="flbl">Finance Tag</div><div style="font-family:var(--fm);color:var(--blue2);font-size:1rem">${esc(a.tag)}</div></div>
+    <div><div class="flbl">Status</div><span class="pill pill-${statusColor(a.status)}">${esc(a.status)}</span></div>
+  </div>
+  <div class="frow" style="margin-top:12px">
+    <div><div class="flbl">Serial Number</div><div style="font-family:var(--fm);font-size:0.82rem">${esc(a.serial)}</div></div>
+    <div><div class="flbl">Model</div><div>${esc(a.model)}</div></div>
+  </div>
+  <div class="frow" style="margin-top:10px">
+    <div><div class="flbl">Location</div><div>${esc(a.location)}</div></div>
+    <div><div class="flbl">Floor</div><div>${esc(a.floor||'—')}</div></div>
+  </div>
+  <div class="frow" style="margin-top:10px">
+    <div><div class="flbl">Original Cost</div><div style="font-family:var(--fm);color:var(--yellow)">${fmtMoney(a.cost)}</div></div>
+    <div><div class="flbl">Net Book Value</div><div style="font-family:var(--fm);color:var(--green)">${fmtMoney(a.nbv)}</div></div>
+  </div>
+  <div class="frow" style="margin-top:10px">
+    <div><div class="flbl">Next Maintenance</div><div>${fmtDate(a.maintenanceDate)}</div></div>
+    <div><div class="flbl">Contract Expiry</div><div>${fmtDate(a.contractExpiry)}</div></div>
+  </div>
+  <div style="margin-top:10px"><div class="flbl">Vendor</div><div>${esc(a.vendor||'—')}</div></div>
+  ${a.photo?`<div style="margin-top:12px"><div class="flbl">Photo</div><img src="${a.photo}" style="width:100%;border-radius:6px;margin-top:4px;max-height:200px;object-fit:cover"></div>`:''}`,
+  `<button class="btn btn-sec" onclick="closeModal()">Close</button>
+   <button class="btn btn-pri" onclick="closeModal();openAssetModal('${id}')">Edit</button>`,true);
+}
+
+function openAssetModal(id){
+  const a=id?DB.assets.find(x=>x.id===id):null;
+  const v=k=>a?esc(a[k]||''):'';
+  showModal(id?'Edit Asset':'Add New Asset',`
+  <div class="frow">
+    <div class="fg"><label class="flbl">Asset Name *</label><input class="finput" id="f-name" value="${v('name')}" placeholder="Full asset name"></div>
+    <div class="fg"><label class="flbl">Finance Tag *</label><input class="finput" id="f-tag" value="${v('tag')}" placeholder="FIN-2024-XXX"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="flbl">Serial Number</label><input class="finput" id="f-serial" value="${v('serial')}"></div>
+    <div class="fg"><label class="flbl">Model Number</label><input class="finput" id="f-model" value="${v('model')}"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="flbl">Location</label><input class="finput" id="f-location" value="${v('location')}"></div>
+    <div class="fg"><label class="flbl">Floor</label><input class="finput" id="f-floor" value="${v('floor')}" placeholder="e.g. L3, B1"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="flbl">Original Cost (SGD)</label><input class="finput" type="number" id="f-cost" value="${a?a.cost:0}"></div>
+    <div class="fg"><label class="flbl">Net Book Value (SGD)</label><input class="finput" type="number" id="f-nbv" value="${a?a.nbv:0}"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="flbl">Category</label>
+      <select class="fsel" id="f-cat">${['IT','Facilities','Office','Safety','Kitchen','General'].map(c=>`<option ${a&&a.category===c?'selected':''}>${c}</option>`).join('')}</select>
+    </div>
+    <div class="fg"><label class="flbl">Status</label>
+      <select class="fsel" id="f-status">${['Active','Faulty','Under Maintenance','Disposed','Withdrawn'].map(s=>`<option ${a&&a.status===s?'selected':''}>${s}</option>`).join('')}</select>
+    </div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="flbl">Next Maintenance Date</label><input class="finput" type="date" id="f-mdate" value="${v('maintenanceDate')}"></div>
+    <div class="fg"><label class="flbl">Contract Expiry Date</label><input class="finput" type="date" id="f-cexp" value="${v('contractExpiry')}"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="flbl">Vendor</label><input class="finput" id="f-vendor" value="${v('vendor')}"></div>
+  </div>
+  <div class="fg"><label class="flbl">Photo (capture or upload)</label>
+    <input class="finput" type="file" accept="image/*" capture="environment" id="f-photo">
+    ${a&&a.photo?`<img src="${a.photo}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;margin-top:6px" id="f-photo-prev">`:'<div id="f-photo-prev"></div>'}
+  </div>`,
+  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button>
+   <button class="btn btn-pri" onclick="saveAsset('${id||''}')">Save Asset</button>`);
+
+  document.getElementById('f-photo').addEventListener('change',function(){
+    const file=this.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      document.getElementById('f-photo-prev').innerHTML=`<img src="${ev.target.result}" style="width:100%;max-height:120px;object-fit:cover;border-radius:4px;margin-top:6px">`;
+      document.getElementById('f-photo-prev').dataset.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function saveAsset(id){
+  const name=document.getElementById('f-name').value.trim();
+  const tag=document.getElementById('f-tag').value.trim();
+  if(!name||!tag){alert('Asset Name and Finance Tag are required.');return;}
+  const photoPrev=document.getElementById('f-photo-prev');
+  const photo=photoPrev?.dataset?.src||(id?DB.assets.find(a=>a.id===id)?.photo:null)||null;
+  const asset={
+    name,tag,
+    serial:document.getElementById('f-serial').value.trim(),
+    model:document.getElementById('f-model').value.trim(),
+    location:document.getElementById('f-location').value.trim(),
+    floor:document.getElementById('f-floor').value.trim(),
+    cost:parseFloat(document.getElementById('f-cost').value)||0,
+    nbv:parseFloat(document.getElementById('f-nbv').value)||0,
+    category:document.getElementById('f-cat').value,
+    status:document.getElementById('f-status').value,
+    maintenanceDate:document.getElementById('f-mdate').value||null,
+    contractExpiry:document.getElementById('f-cexp').value||null,
+    vendor:document.getElementById('f-vendor').value.trim(),
+    photo,
+  };
+  if(id){
+    const orig=DB.assets.find(a=>a.id===id);
+    DB.assets=DB.assets.map(a=>a.id===id?{...orig,...asset}:a);
+  }else{
+    DB.assets.push({...asset,id:'A'+Date.now(),pinX:50,pinY:50,faultyDate:null});
+  }
+  dbSave();closeModal();updateBadges();renderAssets(document.getElementById('page-root'));
+}
+
+function openDisposal(id){
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;
+  showModal('Withdrawal / Disposal Request',`
+  <div class="alert al-info"><strong>${esc(a.name)}</strong> (${esc(a.tag)})<br>NBV: ${fmtMoney(a.nbv)} · Location: ${esc(a.location)}</div>
+  <div class="fg"><label class="flbl">Request Type</label>
+    <select class="fsel" id="d-type"><option>Withdrawal</option><option>Disposal</option></select>
+  </div>
+  <div class="fg"><label class="flbl">Effective Date</label><input class="finput" type="date" id="d-date" value="${new Date().toISOString().slice(0,10)}"></div>
+  <div class="fg"><label class="flbl">Approver Name / Email</label><input class="finput" id="d-approver" placeholder="e.g. John Tan / john.tan@company.com"></div>
+  <div class="fg"><label class="flbl">Reason</label><textarea class="ftxt" id="d-reason" placeholder="State reason for withdrawal or disposal..."></textarea></div>`,
+  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button>
+   <button class="btn btn-warn" onclick="generateDisposalEmail('${id}')">📧 Generate Approval Email</button>`);
+}
+
+function generateDisposalEmail(id){
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;
+  const type=document.getElementById('d-type').value;
+  const date=document.getElementById('d-date').value;
+  const approver=document.getElementById('d-approver').value||'Manager';
+  const reason=document.getElementById('d-reason').value||'—';
+  const subj=`[${type} Request] ${a.name} — Tag: ${a.tag}`;
+  const body=`Dear ${approver},\n\nI am writing to seek your approval for the ${type.toLowerCase()} of the following asset:\n\n📋 ASSET DETAILS\n${'─'.repeat(40)}\nAsset Name     : ${a.name}\nFinance Tag    : ${a.tag}\nSerial Number  : ${a.serial||'—'}\nModel          : ${a.model||'—'}\nLocation       : ${a.location||'—'}\nOriginal Cost  : ${fmtMoney(a.cost)}\nNet Book Value : ${fmtMoney(a.nbv)}\nCategory       : ${a.category||'—'}\nCurrent Status : ${a.status}\n\n📝 REQUEST DETAILS\n${'─'.repeat(40)}\nType           : ${type}\nEffective Date : ${fmtDate(date)}\nReason         : ${reason}\n\nKindly review and provide your approval at your earliest convenience.\n\nThank you.\n\n— Facilities Management`;
+  DB.assets=DB.assets.map(x=>x.id===id?{...x,status:type==='Disposal'?'Disposed':'Withdrawn'}:x);
+  dbSave();closeModal();updateBadges();
+  window.location.href=`mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+  renderAssets(document.getElementById('page-root'));
+}
+
+function importCSV(inp){
+  const f=inp.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const lines=ev.target.result.split('\n').filter(Boolean);
+    if(lines.length<2){alert('CSV appears empty.');return;}
+    const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/["']/g,''));
+    const imported=lines.slice(1).map((line,i)=>{
+      const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+      const obj={};
+      headers.forEach((h,idx)=>{obj[h]=vals[idx]||'';});
+      return{
+        id:'CSV'+Date.now()+i,
+        name:obj.name||obj['asset name']||'Unnamed',
+        tag:obj.tag||obj['finance tag']||obj['tagging number']||'',
+        serial:obj.serial||obj['serial number']||'',
+        model:obj.model||obj['model number']||'',
+        location:obj.location||'',
+        floor:obj.floor||'',
+        cost:parseFloat(obj.cost||0),
+        nbv:parseFloat(obj.nbv||obj['net book value']||0),
+        category:obj.category||'General',
+        status:obj.status||'Active',
+        vendor:obj.vendor||'',
+        maintenanceDate:obj['maintenance date']||obj.maintenancedate||null,
+        contractExpiry:obj['contract expiry']||obj.contractexpiry||null,
+        pinX:50,pinY:50,photo:null,faultyDate:null,
+      };
+    }).filter(a=>a.name&&a.name!=='Unnamed');
+    DB.assets=[...DB.assets,...imported];
+    dbSave();updateBadges();
+    alert(`✓ Imported ${imported.length} assets successfully.`);
+    renderAssets(document.getElementById('page-root'));
+  };
+  reader.readAsText(f);
+}
+
+// ─── WSH SAFETY ────────────────────────────────────────────
+let wshPeriod='daily';
+
+function renderWSH(root){
+  const items=WSH[wshPeriod];
+  const chk=DB.wshChecked[wshPeriod]||{};
+  const done=items.filter(i=>chk[i.id]).length;
+  const pct=Math.round(done/items.length*100);
+  const allCrit=items.filter(i=>i.crit).every(i=>chk[i.id]);
+
+  root.innerHTML=`
+  <div class="stats-row stats-3">
+    <div class="stat-card sc-green"><div class="stat-lbl">Completion</div><div class="stat-val sv-green">${pct}%</div><div class="stat-sub">${done} of ${items.length} items</div></div>
+    <div class="stat-card ${allCrit?'sc-green':'sc-red'}"><div class="stat-lbl">Critical Items</div><div class="stat-val ${allCrit?'sv-green':'sv-red'}">${allCrit?'ALL ✓':'⚠ FAIL'}</div><div class="stat-sub">${items.filter(i=>i.crit).length} critical checks</div></div>
+    <div class="stat-card sc-blue"><div class="stat-lbl">Reports Filed</div><div class="stat-val sv-blue">${DB.wshHistory.length}</div><div class="stat-sub">This session</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn ${wshPeriod==='daily'?'active':''}" onclick="setWSHPeriod('daily')">📅 Daily</button>
+    <button class="tab-btn ${wshPeriod==='monthly'?'active':''}" onclick="setWSHPeriod('monthly')">📆 Monthly</button>
+    <button class="tab-btn ${wshPeriod==='yearly'?'active':''}" onclick="setWSHPeriod('yearly')">📊 Yearly</button>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="font-size:0.75rem;color:var(--t3)">${done}/${items.length} completed</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:0.68rem;color:var(--t3)"><span style="color:var(--red)">●</span> Critical</span>
+      <button class="btn btn-pri btn-sm" onclick="openWSHReport()" ${done===0?'disabled':''}>📋 Submit Report</button>
+    </div>
+  </div>
+  <div class="prog-bar" style="margin-bottom:16px">
+    <div class="prog-fill" style="width:${pct}%;background:${pct===100?'var(--green)':pct>60?'var(--blue)':'var(--yellow)'}"></div>
+  </div>
+  <div id="wsh-list">
+  ${items.map(item=>`
+    <div class="cl-item ${chk[item.id]?'done':''}" onclick="toggleWSH('${item.id}')">
+      <div class="cl-box ${chk[item.id]?'done':''}">${chk[item.id]?'✓':''}</div>
+      <div class="cl-lbl ${chk[item.id]?'done':''}">${esc(item.text)}</div>
+      ${item.crit?`<div class="cl-crit">CRITICAL</div>`:''}
+    </div>`).join('')}
+  </div>
+  ${DB.wshHistory.length>0?`
+  <div style="margin-top:28px;border-top:1px solid var(--b1);padding-top:20px">
+    <div class="card-hd">Past Reports</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Date</th><th>Period</th><th>Inspector</th><th>Score</th><th>Critical</th><th>Action</th></tr></thead>
+      <tbody>
+      ${DB.wshHistory.slice(0,10).map(r=>`<tr>
+        <td style="font-family:var(--fm);font-size:0.7rem">${fmtDate(r.date)}</td>
+        <td><span class="pill pill-blue">${r.period}</span></td>
+        <td>${esc(r.inspector)}</td>
+        <td><span class="pill pill-${r.pct===100?'green':r.pct>60?'yellow':'red'}">${r.pct}%</span></td>
+        <td><span class="pill pill-${r.allCrit?'green':'red'}">${r.allCrit?'Pass':'Fail'}</span></td>
+        <td><button class="btn btn-xs btn-sec" onclick="exportWSHReport('${r.id}')">⬇ Export</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>`:''}`;
+}
+
+function setWSHPeriod(p){wshPeriod=p;renderWSH(document.getElementById('page-root'));}
+
+function toggleWSH(id){
+  if(!DB.wshChecked[wshPeriod])DB.wshChecked[wshPeriod]={};
+  DB.wshChecked[wshPeriod][id]=!DB.wshChecked[wshPeriod][id];
+  dbSave();renderWSH(document.getElementById('page-root'));
+}
+
+function openWSHReport(){
+  const items=WSH[wshPeriod];
+  const chk=DB.wshChecked[wshPeriod]||{};
+  const done=items.filter(i=>chk[i.id]).length;
+  const pct=Math.round(done/items.length*100);
+  const allCrit=items.filter(i=>i.crit).every(i=>chk[i.id]);
+  showModal('Submit Inspection Report',`
+  ${!allCrit?`<div class="alert al-danger">⚠ Some critical items not yet checked. Please verify before submitting.</div>`:''}
+  <div class="fg"><label class="flbl">Inspector Name *</label><input class="finput" id="wsh-name" placeholder="Your name"></div>
+  <div class="fg"><label class="flbl">Remarks / Observations</label><textarea class="ftxt" id="wsh-remarks" placeholder="Note any observations, issues found, or corrective actions taken..."></textarea></div>
+  <div style="background:var(--s2);border-radius:6px;padding:12px;font-size:0.78rem">
+    <div>Period: <strong>${wshPeriod.toUpperCase()}</strong></div>
+    <div>Completion: <strong>${pct}% (${done}/${items.length})</strong></div>
+    <div>Critical Items: <strong style="color:${allCrit?'var(--green)':'var(--red)'}">${allCrit?'ALL PASSED':'SOME FAILED'}</strong></div>
+  </div>`,
+  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button>
+   <button class="btn btn-pri" onclick="submitWSHReport()">✓ Submit Report</button>`);
+}
+
+function submitWSHReport(){
+  const name=document.getElementById('wsh-name').value.trim();
+  if(!name){alert('Please enter inspector name');return;}
+  const items=WSH[wshPeriod];
+  const chk=DB.wshChecked[wshPeriod]||{};
+  const done=items.filter(i=>chk[i.id]).length;
+  const pct=Math.round(done/items.length*100);
+  const allCrit=items.filter(i=>i.crit).every(i=>chk[i.id]);
+  const rec={
+    id:'wsh'+Date.now(),period:wshPeriod,date:new Date().toISOString(),
+    inspector:name,remarks:document.getElementById('wsh-remarks').value,
+    done,total:items.length,pct,allCrit,
+    items:items.map(i=>({...i,done:!!chk[i.id]})),
+  };
+  DB.wshHistory=[rec,...DB.wshHistory];
+  DB.wshChecked[wshPeriod]={};
+  dbSave();closeModal();
+  alert(`✓ ${wshPeriod.charAt(0).toUpperCase()+wshPeriod.slice(1)} WSH report submitted!`);
+  renderWSH(document.getElementById('page-root'));
+}
+
+function exportWSHReport(id){
+  const r=DB.wshHistory.find(x=>x.id===id);if(!r)return;
+  const lines=[`WSH SAFETY INSPECTION REPORT`,'='.repeat(42),`Period     : ${r.period.toUpperCase()}`,`Date       : ${fmtDate(r.date)}`,`Inspector  : ${r.inspector}`,`Completion : ${r.pct}% (${r.done}/${r.total})`,`Critical   : ${r.allCrit?'ALL PASSED':'SOME FAILED'}`,``,`CHECKLIST RESULTS`,'─'.repeat(42),...r.items.map(i=>`[${i.done?'✓':' '}] ${i.crit?'[!] ':'    '}${i.text}`),``,`REMARKS`,'─'.repeat(42),r.remarks||'No remarks.'];
+  const blob=new Blob([lines.join('\n')],{type:'text/plain'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`WSH_${r.period}_${r.date.slice(0,10)}.txt`;a.click();URL.revokeObjectURL(url);
+}
+
+// ─── MAINTENANCE ───────────────────────────────────────────
+let maintTab='upcoming';
+
+function renderMaintenance(root){
+  const faulty=DB.assets.filter(a=>a.status==='Faulty');
+  const upcoming=DB.assets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=60).sort((a,b)=>new Date(a.maintenanceDate)-new Date(b.maintenanceDate));
+  const cExp=DB.assets.filter(a=>a.contractExpiry&&daysUntil(a.contractExpiry)<=90).sort((a,b)=>new Date(a.contractExpiry)-new Date(b.contractExpiry));
+
+  root.innerHTML=`
+  <div class="stats-row stats-4">
+    <div class="stat-card sc-red"><div class="stat-lbl">Faulty Now</div><div class="stat-val sv-red">${faulty.length}</div><div class="stat-sub">Assets down</div></div>
+    <div class="stat-card sc-yellow"><div class="stat-lbl">Maint. Due (60d)</div><div class="stat-val sv-yellow">${upcoming.length}</div><div class="stat-sub">Upcoming</div></div>
+    <div class="stat-card sc-orange"><div class="stat-lbl">Contracts Expiring</div><div class="stat-val sv-orange">${cExp.length}</div><div class="stat-sub">Within 90 days</div></div>
+    <div class="stat-card sc-purple"><div class="stat-lbl">Total Contracts</div><div class="stat-val sv-purple">${DB.assets.filter(a=>a.contractExpiry).length+DB.contracts.length}</div><div class="stat-sub">Tracked</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn ${maintTab==='upcoming'?'active':''}" onclick="setMaintTab('upcoming')">🔧 Maintenance Schedule</button>
+    <button class="tab-btn ${maintTab==='faulty'?'active':''}" onclick="setMaintTab('faulty')">⚠️ Fault Management (${faulty.length})</button>
+    <button class="tab-btn ${maintTab==='contracts'?'active':''}" onclick="setMaintTab('contracts')">📄 Contracts</button>
+    <button class="tab-btn ${maintTab==='settings'?'active':''}" onclick="setMaintTab('settings')">⚙️ Teams Setup</button>
+  </div>
+  <div id="maint-content"></div>`;
+
+  renderMaintContent();
+}
+
+function setMaintTab(t){maintTab=t;renderMaintenance(document.getElementById('page-root'));}
+
+function renderMaintContent(){
+  const el=document.getElementById('maint-content');if(!el)return;
+  if(maintTab==='upcoming'){
+    const upcoming=DB.assets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=60).sort((a,b)=>new Date(a.maintenanceDate)-new Date(b.maintenanceDate));
+    el.innerHTML=upcoming.length===0?`<div class="empty"><div class="empty-icon">✅</div><div>No maintenance due in the next 60 days</div></div>`
+    :`<div class="tbl-wrap"><table><thead><tr><th>Tag</th><th>Asset</th><th>Location</th><th>Due Date</th><th>Days</th><th>Vendor</th><th>Status</th></tr></thead><tbody>
+    ${upcoming.map(a=>{
+      const d=daysUntil(a.maintenanceDate);
+      return`<tr>
+        <td style="font-family:var(--fm);font-size:0.7rem;color:var(--blue2)">${esc(a.tag)}</td>
+        <td style="font-weight:500;color:var(--t1)">${esc(a.name)}</td>
+        <td>${esc(a.location)}</td>
+        <td>${fmtDate(a.maintenanceDate)}</td>
+        <td><span class="pill pill-${d<=7?'red':d<=30?'orange':'yellow'}">${d}d</span></td>
+        <td>${esc(a.vendor||'—')}</td>
+        <td><span class="pill pill-${statusColor(a.status)}">${esc(a.status)}</span></td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>`;
+  } else if(maintTab==='faulty'){
+    const faulty=DB.assets.filter(a=>a.status==='Faulty');
+    let html=faulty.length===0?`<div class="empty"><div class="empty-icon">✅</div><div>All equipment is operational</div></div>`:
+    faulty.map(a=>`<div class="card" style="margin-bottom:10px;border-color:rgba(239,68,68,0.3)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:var(--fh);font-weight:700;font-size:1rem;color:var(--red)">🔴 ${esc(a.name)}</div>
+          <div style="font-size:0.75rem;color:var(--t2);margin-top:4px">${esc(a.tag)} · ${esc(a.serial||'')} · ${esc(a.location)}</div>
+          <div style="margin-top:8px">
+            <div style="font-size:0.66rem;color:var(--t3);font-family:var(--fm);text-transform:uppercase;letter-spacing:0.08em">DOWNTIME</div>
+            <div class="dt-display">${downtimeStr(a.faultyDate)||'Just reported'}</div>
+            <div style="font-size:0.7rem;color:var(--t3);margin-top:2px">Since ${fmtDate(a.faultyDate)}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-direction:column">
+          <button class="btn btn-success btn-sm" onclick="maintClearFault('${a.id}')">✓ Mark Restored</button>
+          <button class="btn btn-danger btn-sm" onclick="renotifyTeams('${a.id}')">📢 Re-notify Teams</button>
+        </div>
+      </div>
+    </div>`).join('');
+
+    html+=`<div style="margin-top:16px"><div class="card-hd" style="margin-bottom:10px">All Assets — Quick Fault Reporting</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Tag</th><th>Asset</th><th>Location</th><th>Status</th><th>Action</th></tr></thead><tbody>
+    ${DB.assets.filter(a=>a.status!=='Disposed'&&a.status!=='Withdrawn').map(a=>`<tr>
+      <td style="font-family:var(--fm);font-size:0.7rem;color:var(--blue2)">${esc(a.tag)}</td>
+      <td>${esc(a.name)}</td>
+      <td>${esc(a.location)}</td>
+      <td><span class="pill pill-${statusColor(a.status)}">${esc(a.status)}</span></td>
+      <td>${a.status==='Faulty'
+        ?`<button class="btn btn-xs btn-success" onclick="maintClearFault('${a.id}')">✓ Restore</button>`
+        :`<button class="btn btn-xs btn-danger" onclick="maintFlagFaulty('${a.id}')">⚠️ Flag Faulty</button>`}</td>
+    </tr>`).join('')}
+    </tbody></table></div></div>`;
+    el.innerHTML=html;
+  } else if(maintTab==='contracts'){
+    const allContracts=DB.assets.filter(a=>a.contractExpiry).sort((a,b)=>new Date(a.contractExpiry)-new Date(b.contractExpiry));
+    el.innerHTML=`
+    <div class="sec-hd">
+      <div class="sec-title">Maintenance Contracts</div>
+      <button class="btn btn-pri btn-sm" onclick="openContractModal()">+ Add Contract</button>
+    </div>
+    ${allContracts.filter(a=>daysUntil(a.contractExpiry)<=90).length>0?`<div class="alert al-warn" style="margin-bottom:14px">⚠ ${allContracts.filter(a=>daysUntil(a.contractExpiry)<=90).length} contract(s) expiring within 90 days.</div>`:''}
+    <div class="tbl-wrap"><table><thead><tr><th>Tag</th><th>Asset</th><th>Vendor</th><th>Contract Expiry</th><th>Days Left</th><th>Next Maint.</th></tr></thead><tbody>
+    ${allContracts.map(a=>{
+      const d=daysUntil(a.contractExpiry);
+      return`<tr>
+        <td style="font-family:var(--fm);font-size:0.7rem;color:var(--blue2)">${esc(a.tag)}</td>
+        <td>${esc(a.name)}</td>
+        <td>${esc(a.vendor||'—')}</td>
+        <td>${fmtDate(a.contractExpiry)}</td>
+        <td><span class="pill pill-${d<=30?'red':d<=90?'yellow':'green'}">${d}d</span></td>
+        <td>${fmtDate(a.maintenanceDate)}</td>
+      </tr>`;
+    }).join('')}
+    ${DB.contracts.map(c=>{
+      const d=daysUntil(c.expiry);
+      return`<tr>
+        <td style="color:var(--t3)">—</td>
+        <td>${esc(c.name)}</td>
+        <td>${esc(c.vendor||'—')}</td>
+        <td>${fmtDate(c.expiry)}</td>
+        <td><span class="pill pill-${d<=30?'red':d<=90?'yellow':'green'}">${d}d</span></td>
+        <td>—</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>`;
+  } else if(maintTab==='settings'){
+    el.innerHTML=`<div class="card">
+      <div class="card-hd">MS Teams Integration</div>
+      <div class="alert al-info" style="margin-bottom:16px">When you flag an asset as faulty, a notification card is posted to your MS Teams channel automatically.</div>
+      <div class="fg">
+        <label class="flbl">MS Teams Incoming Webhook URL</label>
+        <input class="finput" id="teams-wh" placeholder="https://yourorg.webhook.office.com/webhookb2/..." value="${esc(DB.teamsWebhook)}" oninput="DB.teamsWebhook=this.value;dbSave()">
+      </div>
+      <div style="font-size:0.75rem;color:var(--t3);line-height:1.9">
+        <strong style="color:var(--t2)">Setup steps:</strong><br>
+        1. In MS Teams, go to the channel → ··· → Connectors<br>
+        2. Find "Incoming Webhook" → Configure → give it a name<br>
+        3. Copy the webhook URL and paste it above<br>
+        4. Fault/restore events will post as coloured cards in the channel
+      </div>
+      <button class="btn btn-sec btn-sm" style="margin-top:12px" onclick="sendTeamsTest()">📢 Send Test Notification</button>
+    </div>`;
+  }
+}
+
+function maintFlagFaulty(id){
+  DB.assets=DB.assets.map(a=>a.id===id?{...a,status:'Faulty',faultyDate:new Date().toISOString()}:a);
+  dbSave();updateBadges();
+  const a=DB.assets.find(x=>x.id===id);
+  sendTeamsMsg(a,'down');
+  renderMaintenance(document.getElementById('page-root'));
+}
+function maintClearFault(id){
+  const a=DB.assets.find(x=>x.id===id);
+  DB.assets=DB.assets.map(x=>x.id===id?{...x,status:'Active',faultyDate:null}:x);
+  dbSave();updateBadges();
+  sendTeamsMsg(a,'up');
+  renderMaintenance(document.getElementById('page-root'));
+}
+function renotifyTeams(id){const a=DB.assets.find(x=>x.id===id);sendTeamsMsg(a,'down');}
+
+function sendTeamsMsg(a,state){
+  const wh=DB.teamsWebhook;
+  const isDown=state==='down';
+  const title=isDown?`🔴 EQUIPMENT DOWN: ${a.name}`:`✅ EQUIPMENT RESTORED: ${a.name}`;
+  if(!wh){
+    alert(`[DEMO — no webhook configured]\n\n${title}\n\nTag: ${a.tag}\nLocation: ${a.location}\n\nConfigure MS Teams webhook in Maintenance → Teams Setup.`);
+    return;
+  }
+  const msg={"@type":"MessageCard","@context":"https://schema.org/extensions","themeColor":isDown?"FF0000":"00B050","summary":title,"sections":[{"activityTitle":title,"facts":[{"name":"Finance Tag","value":a.tag},{"name":"Serial","value":a.serial||'—'},{"name":"Location","value":a.location},{"name":"Status","value":isDown?`⚠ FAULTY — ${new Date().toLocaleString()}`:`✅ Restored — ${new Date().toLocaleString()}`},{"name":"Action","value":isDown?"Please contact Facilities. Asset is out of service.":"Asset cleared and back in service."}]}]};
+  fetch(wh,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msg)})
+    .then(()=>alert('✓ Teams notification sent!'))
+    .catch(e=>alert('Teams error: '+e.message));
+}
+function sendTeamsTest(){sendTeamsMsg({name:'Test Equipment',tag:'TEST-001',serial:'N/A',location:'Test Location'},'down');}
+
+function openContractModal(){
+  showModal('Add Maintenance Contract',`
+  <div class="fg"><label class="flbl">Contract / Service Name</label><input class="finput" id="c-name" placeholder="e.g. Annual AC Servicing"></div>
+  <div class="frow">
+    <div class="fg"><label class="flbl">Vendor</label><input class="finput" id="c-vendor"></div>
+    <div class="fg"><label class="flbl">Contract Value (SGD)</label><input class="finput" type="number" id="c-val"></div>
+  </div>
+  <div class="fg"><label class="flbl">Expiry Date</label><input class="finput" type="date" id="c-exp"></div>
+  <div class="fg"><label class="flbl">Notes</label><textarea class="ftxt" id="c-notes"></textarea></div>`,
+  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button>
+   <button class="btn btn-pri" onclick="saveContract()">Save</button>`);
+}
+
+function saveContract(){
+  const name=document.getElementById('c-name').value.trim();
+  if(!name){alert('Contract name required.');return;}
+  DB.contracts.push({id:'C'+Date.now(),name,vendor:document.getElementById('c-vendor').value,value:document.getElementById('c-val').value,expiry:document.getElementById('c-exp').value,notes:document.getElementById('c-notes').value});
+  dbSave();closeModal();renderMaintenance(document.getElementById('page-root'));
+}
+
+// ─── FIRST AID ──────────────────────────────────────────────
+function renderFirstAid(root){
+  const items=DB.firstAid.map(i=>({...i,_status:faStatus(i)}));
+  const crit=items.filter(i=>i._status==='Critical');
+  const exp=items.filter(i=>i._status==='Expiring');
+  const low=items.filter(i=>i._status==='Low');
+  const ok=items.filter(i=>i._status==='OK');
+
+  root.innerHTML=`
+  ${crit.length>0?`<div class="alert al-danger">🚨 ${crit.length} item(s) CRITICAL — zero stock or expired!</div>`:''}
+  ${exp.length>0?`<div class="alert al-warn">⚠ ${exp.length} item(s) expiring within 60 days — please replenish.</div>`:''}
+  <div class="stats-row stats-4">
+    <div class="stat-card sc-red"><div class="stat-lbl">Critical</div><div class="stat-val sv-red">${crit.length}</div><div class="stat-sub">Zero / expired</div></div>
+    <div class="stat-card sc-orange"><div class="stat-lbl">Expiring</div><div class="stat-val sv-orange">${exp.length}</div><div class="stat-sub">Within 60 days</div></div>
+    <div class="stat-card sc-yellow"><div class="stat-lbl">Low Stock</div><div class="stat-val sv-yellow">${low.length}</div><div class="stat-sub">Below minimum</div></div>
+    <div class="stat-card sc-green"><div class="stat-lbl">OK</div><div class="stat-val sv-green">${ok.length}</div><div class="stat-sub">Fully stocked</div></div>
+  </div>
+  <div class="sec-hd">
+    <div class="sec-title">First Aid Inventory</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-warn btn-sm" onclick="generateFAEmail()" ${crit.length+exp.length+low.length===0?'disabled':''}>📧 Replenishment Email</button>
+      <button class="btn btn-pri btn-sm" onclick="openFAModal(null)">+ Add Item</button>
+    </div>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Item Name</th><th>Location</th><th>Qty</th><th>Min</th><th>Expiry</th><th>Days to Expiry</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    ${items.map(item=>{
+      const d=daysUntil(item.expiry);
+      return`<tr>
+        <td style="font-weight:500;color:var(--t1)">${esc(item.name)}</td>
+        <td style="font-size:0.73rem">${esc(item.location)}</td>
+        <td><span style="font-family:var(--fm);font-size:0.9rem;font-weight:600;color:${item.qty===0?'var(--red)':item.qty<item.minQty?'var(--yellow)':'var(--t1)'}">${item.qty}</span></td>
+        <td style="font-family:var(--fm);color:var(--t3)">${item.minQty}</td>
+        <td>${fmtDate(item.expiry)}</td>
+        <td><span class="pill pill-${d<=0?'red':d<=60?'orange':d<=180?'yellow':'green'}">${d<=0?'EXPIRED':d+'d'}</span></td>
+        <td><span class="pill pill-${faColor(item._status)}">${item._status}</span></td>
+        <td>
+          <div style="display:flex;gap:3px">
+            <button class="btn btn-xs btn-success" onclick="replenishFA('${item.id}')">↑ Update</button>
+            <button class="btn btn-xs btn-sec" onclick="openFAModal('${item.id}')">✏️</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function replenishFA(id){
+  const item=DB.firstAid.find(i=>i.id===id);if(!item)return;
+  const v=prompt(`"${item.name}"\nCurrent qty: ${item.qty}\nEnter new quantity:`,item.qty);
+  if(v===null)return;
+  const qty=parseInt(v);
+  if(isNaN(qty)||qty<0){alert('Invalid quantity.');return;}
+  DB.firstAid=DB.firstAid.map(i=>i.id===id?{...i,qty}:i);
+  dbSave();updateBadges();renderFirstAid(document.getElementById('page-root'));
+}
+
+function openFAModal(id){
+  const item=id?DB.firstAid.find(i=>i.id===id):null;
+  const v=k=>item?esc(item[k]||''):'';
+  showModal(id?'Edit First Aid Item':'Add First Aid Item',`
+  <div class="fg"><label class="flbl">Item Name</label><input class="finput" id="fa-name" value="${v('name')}"></div>
+  <div class="fg"><label class="flbl">Location</label>
+    <select class="fsel" id="fa-loc">
+      ${['Cabinet L1','Cabinet L3','Reception','Kitchen','Other'].map(l=>`<option ${item&&item.location===l?'selected':''}>${l}</option>`).join('')}
+    </select>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="flbl">Current Qty</label><input class="finput" type="number" min="0" id="fa-qty" value="${item?item.qty:0}"></div>
+    <div class="fg"><label class="flbl">Minimum Qty</label><input class="finput" type="number" min="1" id="fa-min" value="${item?item.minQty:2}"></div>
+  </div>
+  <div class="fg"><label class="flbl">Expiry Date</label><input class="finput" type="date" id="fa-exp" value="${v('expiry')}"></div>`,
+  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button>
+   <button class="btn btn-pri" onclick="saveFA('${id||''}')">Save</button>`);
+}
+
+function saveFA(id){
+  const name=document.getElementById('fa-name').value.trim();
+  if(!name){alert('Item name required.');return;}
+  const obj={name,location:document.getElementById('fa-loc').value,qty:parseInt(document.getElementById('fa-qty').value)||0,minQty:parseInt(document.getElementById('fa-min').value)||1,expiry:document.getElementById('fa-exp').value};
+  if(id){DB.firstAid=DB.firstAid.map(i=>i.id===id?{...i,...obj}:i);}
+  else{DB.firstAid.push({...obj,id:'fa'+Date.now()});}
+  dbSave();closeModal();updateBadges();renderFirstAid(document.getElementById('page-root'));
+}
+
+function generateFAEmail(){
+  const need=DB.firstAid.filter(i=>faStatus(i)!=='OK');
+  const lines=need.map(i=>`• ${i.name}\n  Current: ${i.qty} | Min Required: ${i.minQty} | Location: ${i.location} | Expiry: ${fmtDate(i.expiry)} | Status: ${faStatus(i)}`);
+  const subj=`[First Aid Replenishment Required] ${new Date().toLocaleDateString('en-SG')}`;
+  const body=`Dear Team,\n\nPlease arrange for replenishment of the following first aid items:\n\n${lines.join('\n\n')}\n\nKindly ensure stock is replenished and expiry dates updated in the FacilityOS system upon delivery.\n\nThank you.\n\n— Facilities Management`;
+  window.location.href=`mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+}
+
+// ─── INIT ──────────────────────────────────────────────────
+async function init(){
+  await dbLoad();
+  navigate('dashboard');
+  // refresh downtime counters every minute
+  setInterval(()=>{
+    if(currentPage==='maintenance'&&maintTab==='faulty') renderMaintenance(document.getElementById('page-root'));
+    if(currentPage==='assets') renderAssets(document.getElementById('page-root'));
+    updateBadges();
+  },60000);
+}
+init();
+</script>
+</body>
+</html>
