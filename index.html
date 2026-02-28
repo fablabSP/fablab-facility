@@ -376,6 +376,26 @@ canvas{display:block;}
 #topbar-fac-tag{background:var(--fac-dim) !important;color:var(--fac2) !important;border:1.5px solid var(--fac-border) !important;}
 
 
+/* ═══ PHOTO UPLOAD ════════════════════════════ */
+.photo-upload-wrap{margin-bottom:12px;}
+.photo-preview{
+  width:100%;height:160px;border-radius:9px;border:2px dashed var(--border2);
+  background:var(--surface2);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:6px;cursor:pointer;transition:all .18s;overflow:hidden;
+  position:relative;
+}
+.photo-preview:hover{border-color:var(--fac);background:var(--fac-dim);}
+.photo-preview img{width:100%;height:100%;object-fit:cover;border-radius:7px;}
+.photo-preview .photo-placeholder{display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;}
+.photo-placeholder-icon{font-size:2rem;opacity:.4;}
+.photo-placeholder-lbl{font-size:.78rem;color:var(--t3);font-weight:500;}
+.photo-placeholder-sub{font-size:.68rem;color:var(--t3);opacity:.7;}
+.photo-actions{display:flex;gap:7px;margin-top:7px;flex-wrap:wrap;}
+.photo-clear{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:.75rem;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:2;transition:background .15s;}
+.photo-clear:hover{background:rgba(239,68,68,.8);}
+.photo-preview.has-photo .photo-clear{display:flex;}
+.photo-preview.has-photo .photo-placeholder{display:none;}
+
 /* ═══ PREDICTIVE CARD ═════════════════════════ */
 .pred-bar{height:8px;border-radius:4px;background:var(--surface3);overflow:hidden;margin-top:4px;}
 .pred-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1);}
@@ -391,6 +411,16 @@ canvas{display:block;}
   #topbar{padding:0 14px;}
   #page-root{padding:14px;}
   #signin-bar{padding:6px 14px;}
+  /* When mobile overlay is open, restore full sidebar appearance */
+  #sidebar.mobile-open .nav-section{opacity:1 !important;width:auto !important;height:auto !important;padding:10px 8px 4px !important;overflow:visible !important;}
+  #sidebar.mobile-open .nav-lbl{opacity:1 !important;width:auto !important;overflow:visible !important;}
+  #sidebar.mobile-open .sb-version{opacity:1 !important;width:auto !important;overflow:visible !important;}
+  #sidebar.mobile-open .logo-text{opacity:1 !important;width:auto !important;overflow:visible !important;}
+  #sidebar.mobile-open .facility-cards-wrap{display:block !important;opacity:1 !important;width:auto !important;height:auto !important;overflow:visible !important;padding:8px 10px 10px !important;}
+  #sidebar.mobile-open .nav-btn{justify-content:flex-start !important;padding:10px 10px !important;}
+  #sidebar.mobile-open .logo-wrap{justify-content:flex-start !important;}
+  #sidebar.mobile-open .sb-footer{justify-content:space-between !important;}
+  #sidebar.mobile-open .nav-badge{opacity:1 !important;pointer-events:auto !important;}
 }
 @media(max-width:700px){
   #sidebar{display:none;}
@@ -1389,7 +1419,7 @@ function renderAssets(root){
       const dc=daysUntil(a.maintenanceDate);
       return`<tr>
         <td><span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--blue2)">${esc(a.tag)}</span></td>
-        <td><div style="font-weight:600;color:var(--t1);font-size:.79rem">${esc(a.name)}</div><div style="font-size:.65rem;color:var(--t3)">${esc(a.model||'')}</div></td>
+        <td><div style="display:flex;align-items:center;gap:9px">${a.photo?`<img src="${a.photo}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--border)">`:`<div style="width:36px;height:36px;border-radius:6px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;border:1px solid var(--border)">📷</div>`}<div><div style="font-weight:600;color:var(--t1);font-size:.82rem">${esc(a.name)}</div><div style="font-size:.68rem;color:var(--t3)">${esc(a.model||'')}</div></div></div></td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:.68rem">${esc(a.serial||'')}</td>
         <td>${esc(a.location||'')}</td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${fmtMoney(a.cost)}</td>
@@ -1430,6 +1460,7 @@ function viewAsset(id){
   const ppm=getPPMPrediction(a);
   showModal(a.name,`
   ${a.status==='Faulty'?`<div class="alert al-danger">⚠️ FAULTY — Down ${downtimeStr(a.faultyDate)}</div>`:''}
+  ${a.photo?`<div style="margin-bottom:14px"><img src="${a.photo}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border)"></div>`:''}
   <div class="frow">
     <div><div class="flbl">Finance Tag</div><div style="font-family:'JetBrains Mono',monospace;color:var(--blue2);font-weight:700;font-size:.9rem">${esc(a.tag)}</div></div>
     <div><div class="flbl">Status</div><span class="pill pill-${statusColor(a.status)}">${esc(a.status)}</span></div>
@@ -1492,7 +1523,30 @@ function openAssetModal(id){
   const a=id?DB.assets.find(x=>x.id===id):null;
   const v=k=>a?esc(a[k]||''):'';
   const facOpts=DB.facilities.filter(f=>f.active).map(f=>`<option value="${f.id}" ${(a?a.facility:currentFacility)===f.id?'selected':''}>${f.name}</option>`).join('');
+  const hasPhoto=a&&a.photo;
   showModal(id?'Edit Asset':'Add New Asset',`
+  <div class="photo-upload-wrap">
+    <label class="flbl">Asset Photo</label>
+    <div class="photo-preview ${hasPhoto?'has-photo':''}" id="f-photo-preview" onclick="document.getElementById('f-photo-file').click()">
+      ${hasPhoto?`<img id="f-photo-img" src="${a.photo}" alt="Asset photo">`:`<img id="f-photo-img" src="" alt="" style="display:none">`}
+      <div class="photo-placeholder">
+        <div class="photo-placeholder-icon">📷</div>
+        <div class="photo-placeholder-lbl">Tap to take photo or upload</div>
+        <div class="photo-placeholder-sub">Camera · Gallery · File</div>
+      </div>
+      <button class="photo-clear" id="f-photo-clear" onclick="clearAssetPhoto(event)" title="Remove photo">✕</button>
+    </div>
+    <div class="photo-actions">
+      <label class="btn btn-sec btn-sm" style="cursor:pointer">
+        📷 Camera
+        <input type="file" id="f-photo-camera" accept="image/*" capture="environment" style="display:none" onchange="handleAssetPhoto(this)">
+      </label>
+      <label class="btn btn-sec btn-sm" style="cursor:pointer">
+        🖼 Gallery
+        <input type="file" id="f-photo-file" accept="image/*" style="display:none" onchange="handleAssetPhoto(this)">
+      </label>
+    </div>
+  </div>
   <div class="frow"><div class="fg"><label class="flbl">Asset Name *</label><input class="finput" id="f-name" value="${v('name')}"></div><div class="fg"><label class="flbl">Finance Tag *</label><input class="finput" id="f-tag" value="${v('tag')}"></div></div>
   <div class="frow"><div class="fg"><label class="flbl">Serial Number</label><input class="finput" id="f-serial" value="${v('serial')}"></div><div class="fg"><label class="flbl">Model</label><input class="finput" id="f-model" value="${v('model')}"></div></div>
   <div class="frow"><div class="fg"><label class="flbl">Facility</label><select class="fsel" id="f-fac">${facOpts}</select></div><div class="fg"><label class="flbl">Location</label><input class="finput" id="f-location" value="${v('location')}"></div></div>
@@ -1500,7 +1554,33 @@ function openAssetModal(id){
   <div class="frow"><div class="fg"><label class="flbl">Category</label><select class="fsel" id="f-cat">${['Manufacturing','Electronics','Fabrication','IT','Office','Safety','General'].map(c=>`<option ${a&&a.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="fg"><label class="flbl">Status</label><select class="fsel" id="f-status">${['Active','Faulty','Under Maintenance','Disposed','Withdrawn'].map(s=>`<option ${a&&a.status===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
   <div class="frow"><div class="fg"><label class="flbl">Next Maintenance</label><input class="finput" type="date" id="f-mdate" value="${v('maintenanceDate')}"></div><div class="fg"><label class="flbl">Contract Expiry</label><input class="finput" type="date" id="f-cexp" value="${v('contractExpiry')}"></div></div>
   <div class="frow"><div class="fg"><label class="flbl">Vendor</label><input class="finput" id="f-vendor" value="${v('vendor')}"></div><div class="fg"><label class="flbl">Current Usage Hours</label><input class="finput" type="number" id="f-hours" value="${a?a.usageHours||0:0}"></div></div>`,
-  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveAsset('${id||''}')">💾 Save</button>`);
+  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveAsset('${id||''}')">💾 Save</button>`,'wide');
+}
+
+// Shared photo state for the currently open modal
+let _pendingPhoto = null;
+
+function handleAssetPhoto(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _pendingPhoto = e.target.result;
+    const img = document.getElementById('f-photo-img');
+    const prev = document.getElementById('f-photo-preview');
+    if(img){ img.src = e.target.result; img.style.display='block'; }
+    if(prev){ prev.classList.add('has-photo'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearAssetPhoto(e){
+  e.stopPropagation();
+  _pendingPhoto = '';
+  const img = document.getElementById('f-photo-img');
+  const prev = document.getElementById('f-photo-preview');
+  if(img){ img.src=''; img.style.display='none'; }
+  if(prev){ prev.classList.remove('has-photo'); }
 }
 
 function saveAsset(id){
@@ -1508,9 +1588,13 @@ function saveAsset(id){
   const name=document.getElementById('f-name').value.trim();
   const tag=document.getElementById('f-tag').value.trim();
   if(!name||!tag){alert('Name and Tag required.');return;}
-  const asset={name,tag,serial:document.getElementById('f-serial').value.trim(),model:document.getElementById('f-model').value.trim(),facility:document.getElementById('f-fac').value,location:document.getElementById('f-location').value.trim(),cost:parseFloat(document.getElementById('f-cost').value)||0,nbv:parseFloat(document.getElementById('f-nbv').value)||0,category:document.getElementById('f-cat').value,status:document.getElementById('f-status').value,maintenanceDate:document.getElementById('f-mdate').value||null,contractExpiry:document.getElementById('f-cexp').value||null,vendor:document.getElementById('f-vendor').value.trim(),usageHours:parseFloat(document.getElementById('f-hours').value)||0};
+  // Resolve photo: _pendingPhoto = new image (data URL), '' = cleared, null = unchanged
+  const existingAsset = id ? DB.assets.find(a=>a.id===id) : null;
+  const photo = _pendingPhoto !== null ? _pendingPhoto : (existingAsset ? existingAsset.photo : null);
+  _pendingPhoto = null;
+  const asset={name,tag,serial:document.getElementById('f-serial').value.trim(),model:document.getElementById('f-model').value.trim(),facility:document.getElementById('f-fac').value,location:document.getElementById('f-location').value.trim(),cost:parseFloat(document.getElementById('f-cost').value)||0,nbv:parseFloat(document.getElementById('f-nbv').value)||0,category:document.getElementById('f-cat').value,status:document.getElementById('f-status').value,maintenanceDate:document.getElementById('f-mdate').value||null,contractExpiry:document.getElementById('f-cexp').value||null,vendor:document.getElementById('f-vendor').value.trim(),usageHours:parseFloat(document.getElementById('f-hours').value)||0,photo};
   if(id){DB.assets=DB.assets.map(a=>a.id===id?{...a,...asset}:a);}
-  else{DB.assets.push({...asset,id:'A'+Date.now(),photo:null,faultyDate:null,pinX:50,pinY:50,lastUsed:null});}
+  else{DB.assets.push({...asset,id:'A'+Date.now(),faultyDate:null,pinX:50,pinY:50,lastUsed:null});}
   auditLog(id?'Edited asset':'Added asset',tag);
   dbSave();closeModal();updateBadges();renderAssets(document.getElementById('page-root'));
 }
