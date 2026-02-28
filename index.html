@@ -74,6 +74,11 @@ body{height:100dvh;background:var(--bg);color:var(--t1);font-family:'Plus Jakart
 .nav-icon{font-size:1.15rem;width:22px;text-align:center;flex-shrink:0;}
 .nav-lbl{flex:1;overflow:hidden;transition:opacity .2s,width .3s;}
 #sidebar.collapsed .nav-lbl{opacity:0;width:0;}
+.sub-nav{max-height:0;overflow:hidden;transition:max-height .25s cubic-bezier(.4,0,.2,1);}
+.sub-nav.open{max-height:200px;}
+.nav-sub{padding-left:28px !important;font-size:.82rem !important;opacity:.85;}
+.nav-sub:hover{opacity:1;}
+#sidebar.collapsed .sub-nav{display:none;}
 .nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:.58rem;font-family:'JetBrains Mono',monospace;padding:2px 5px;border-radius:10px;min-width:17px;text-align:center;flex-shrink:0;}
 .nav-badge.amber{background:var(--yellow);color:#1a0f00;}
 #sidebar.collapsed .nav-badge{opacity:0;pointer-events:none;}
@@ -544,18 +549,26 @@ canvas{display:block;}
     <nav class="nav">
       <div class="nav-section">Main</div>
       <button class="nav-btn active" onclick="navigate('dashboard')" id="nav-dashboard"><span class="nav-icon">⚡</span><span class="nav-lbl">Dashboard</span></button>
-      <button class="nav-btn" onclick="navigate('assets')" id="nav-assets"><span class="nav-icon">🏷️</span><span class="nav-lbl">Asset Management</span></button>
+      <!-- Asset Management with sub-nav -->
+      <button class="nav-btn" onclick="toggleSubNav('assets-sub');navigate('assets')" id="nav-assets"><span class="nav-icon">🏷️</span><span class="nav-lbl">Asset Management</span><span class="nav-lbl nav-sub-arrow" id="assets-sub-arrow" style="flex:0;margin-left:auto;font-size:.7rem;transition:transform .2s">›</span></button>
+      <div class="sub-nav" id="assets-sub">
+        <button class="nav-btn nav-sub" onclick="navigate('assets');setAssetFilter('all')" id="nav-assets-all"><span class="nav-icon">📋</span><span class="nav-lbl">All Assets</span></button>
+        <button class="nav-btn nav-sub" onclick="navigate('assets');setAssetFilter('Fixed Asset')" id="nav-assets-fa"><span class="nav-icon">🏗️</span><span class="nav-lbl">Fixed Assets</span></button>
+        <button class="nav-btn nav-sub" onclick="navigate('assets');setAssetFilter('LVA')" id="nav-assets-lva"><span class="nav-icon">📦</span><span class="nav-lbl">Low Value Assets</span></button>
+      </div>
       <div class="nav-section">Safety & Checks</div>
       <button class="nav-btn" onclick="navigate('wsh-daily')" id="nav-wsh-daily"><span class="nav-icon">📅</span><span class="nav-lbl">Daily Checklist</span><span class="nav-badge" id="badge-daily" style="display:none">!</span></button>
       <button class="nav-btn" onclick="navigate('wsh-monthly')" id="nav-wsh-monthly"><span class="nav-icon">📆</span><span class="nav-lbl">Monthly Checklist</span></button>
       <button class="nav-btn" onclick="navigate('wsh-yearly')" id="nav-wsh-yearly"><span class="nav-icon">📊</span><span class="nav-lbl">Hazard Checklist</span></button>
       <button class="nav-btn" onclick="navigate('firstaid')" id="nav-firstaid"><span class="nav-icon">🩹</span><span class="nav-lbl">First Aid</span><span class="nav-badge amber" id="badge-fa" style="display:none">!</span></button>
+      <button class="nav-btn" onclick="navigate('chemicals')" id="nav-chemicals"><span class="nav-icon">🧪</span><span class="nav-lbl">Chemicals SDS</span></button>
       <div class="nav-section">Operations</div>
       <button class="nav-btn" onclick="navigate('maintenance')" id="nav-maintenance"><span class="nav-icon">🔧</span><span class="nav-lbl">Maintenance</span><span class="nav-badge" id="badge-maint" style="display:none">!</span></button>
       <button class="nav-btn" onclick="navigate('analytics')" id="nav-analytics"><span class="nav-icon">📈</span><span class="nav-lbl">Analytics & PPM</span></button>
       <div class="nav-section">Admin</div>
       <button class="nav-btn" onclick="navigate('staff')" id="nav-staff"><span class="nav-icon">👥</span><span class="nav-lbl">Staff Management</span></button>
       <button class="nav-btn" onclick="navigate('facilities')" id="nav-facilities"><span class="nav-icon">🏢</span><span class="nav-lbl">Facilities Admin</span></button>
+      <button class="nav-btn" onclick="navigate('passcodes')" id="nav-passcodes"><span class="nav-icon">🔐</span><span class="nav-lbl">Passcode Records</span></button>
       <button class="nav-btn" onclick="navigate('auditlog')" id="nav-auditlog"><span class="nav-icon">📋</span><span class="nav-lbl">Audit Log</span></button>
     </nav>
     <div class="sb-footer">
@@ -679,6 +692,10 @@ let DB = {
   floorplans: {},
   // Audit log
   auditLog: [],
+  // Chemicals SDS
+  chemicals: {},
+  // Passcode records (stored encrypted)
+  passcodes: [],
 };
 
 // Current state
@@ -823,7 +840,8 @@ function navigate(page){
     'wsh-yearly':'Hazard Identification Checklist',
     firstaid:'First Aid Inventory',maintenance:'Maintenance & Downtime',
     analytics:'Analytics & Predictive PPM',staff:'Staff Management',
-    facilities:'Facilities Administration',auditlog:'Audit Log'
+    facilities:'Facilities Administration',auditlog:'Audit Log',
+    chemicals:'Chemicals Safety Data Sheet',passcodes:'Passcode Records'
   };
   document.getElementById('page-title').textContent=titles[page]||page;
   updateBadges();
@@ -840,6 +858,8 @@ function navigate(page){
   else if(page==='staff')renderStaff(root);
   else if(page==='facilities')renderFacilitiesAdmin(root);
   else if(page==='auditlog')renderAuditLog(root);
+  else if(page==='chemicals')renderChemicals(root);
+  else if(page==='passcodes')renderPasscodes(root);
 }
 
 function updateBadges(){
@@ -884,7 +904,7 @@ function seedData(){
   if(DB.assets.length>0)return;
   // Assets across facilities
   DB.assets=[
-    {id:'A001',tag:'T11-FIN-001',name:'3D Printer Ultimaker S5',serial:'UM-S5-1234',model:'Ultimaker S5',facility:'T11C01',location:'Bay A',cost:12000,nbv:8000,category:'Manufacturing',status:'Active',vendor:'Ultimaker SG',maintenanceDate:'2025-05-15',contractExpiry:'2026-05-15',faultyDate:null,photo:null,pinX:30,pinY:40,usageHours:320,lastUsed:new Date(Date.now()-86400000*2).toISOString()},
+    {id:'A001',tag:'T11-FIN-001',name:'3D Printer Ultimaker S5',serial:'UM-S5-1234',model:'Ultimaker S5',facility:'T11C01',location:'Bay A',cost:12000,nbv:8000,category:'Manufacturing',status:'Active',vendor:'Ultimaker SG',maintenanceDate:'2025-05-15',contractExpiry:'2026-05-15',faultyDate:null,photo:null,pinX:30,pinY:40,usageHours:320,lastUsed:new Date(Date.now()-86400000*2).toISOString(),spendCategory:'Fixed Asset',description:'FDM 3D printer for prototyping and fabrication',dateAcquired:'2022-03-01',assetClass:'Machinery & Equipment',assetType:'Printing Equipment'},
     {id:'A002',tag:'T11-FIN-002',name:'Laser Cutter Epilog Fusion',serial:'EL-FU-5678',model:'Fusion Pro 36',facility:'T11C01',location:'Bay B',cost:28000,nbv:20000,category:'Manufacturing',status:'Faulty',vendor:'Epilog Singapore',maintenanceDate:'2025-04-10',contractExpiry:'2026-01-10',faultyDate:new Date(Date.now()-86400000*1.5).toISOString(),photo:null,pinX:55,pinY:45,usageHours:850,lastUsed:new Date(Date.now()-86400000*3).toISOString()},
     {id:'A003',tag:'T11-FIN-003',name:'CNC Router ShopBot',serial:'SB-CNC-9012',model:'ShopBot Desktop',facility:'T11C01',location:'Bay C',cost:15000,nbv:10500,category:'Manufacturing',status:'Active',vendor:'ShopBot Asia',maintenanceDate:'2025-07-20',contractExpiry:'2026-07-20',faultyDate:null,photo:null,pinX:70,pinY:35,usageHours:510,lastUsed:new Date(Date.now()-86400000*1).toISOString()},
     {id:'A004',tag:'T14-FIN-001',name:'Oscilloscope Tektronix',serial:'TK-OSC-3456',model:'TDS2024C',facility:'T1442',location:'Lab Bench 1',cost:3500,nbv:2800,category:'Electronics',status:'Active',vendor:'Tektronix SG',maintenanceDate:'2025-09-01',contractExpiry:'2026-09-01',faultyDate:null,photo:null,pinX:40,pinY:50,usageHours:180,lastUsed:new Date(Date.now()-86400000*5).toISOString()},
@@ -1411,20 +1431,36 @@ function renderDashboard(root){
 // ═══════════════════════════════════════════════════════
 //  ASSETS
 // ═══════════════════════════════════════════════════════
+let currentSpendFilter='all';
+function setAssetFilter(f){currentSpendFilter=f;renderAssets(document.getElementById('page-root'));}
+function toggleSubNav(id){
+  const el=document.getElementById(id);
+  const arrow=document.getElementById(id.replace('-sub','-sub-arrow'));
+  if(!el)return;
+  el.classList.toggle('open');
+  if(arrow)arrow.style.transform=el.classList.contains('open')?'rotate(90deg)':'';
+}
+
 function renderAssets(root){
-  const fAssets=facAssets();
-  const faulty=fAssets.filter(a=>a.status==='Faulty');
-  const upcoming=fAssets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=60&&daysUntil(a.maintenanceDate)>=0);
-  const totalNBV=fAssets.reduce((s,a)=>s+Number(a.nbv||0),0);
+  const allFacAssets=facAssets();
+  const fAssets=currentSpendFilter==='all'?allFacAssets:allFacAssets.filter(a=>(a.spendCategory||'Fixed Asset')===currentSpendFilter);
+  const faulty=allFacAssets.filter(a=>a.status==='Faulty');
+  const upcoming=allFacAssets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=60&&daysUntil(a.maintenanceDate)>=0);
+  const totalNBV=allFacAssets.reduce((s,a)=>s+Number(a.nbv||0),0);
   root.innerHTML=`
   ${faulty.length>0?`<div class="alert al-danger">⚠️ ${faulty.length} asset(s) FAULTY in ${currentFacility}</div>`:''}
   <div class="stats-row stats-4">
-    <div class="stat-card sc-blue"><div class="stat-lbl">Assets</div><div class="stat-val sv-blue">${fAssets.length}</div><div class="stat-sub">${currentFacility}</div></div>
-    <div class="stat-card sc-green"><div class="stat-lbl">Active</div><div class="stat-val sv-green">${fAssets.filter(a=>a.status==='Active').length}</div><div class="stat-sub">In service</div></div>
-    <div class="stat-card sc-red"><div class="stat-lbl">Faulty</div><div class="stat-val sv-red">${faulty.length}</div><div class="stat-sub">Down</div></div>
+    <div class="stat-card sc-blue"><div class="stat-lbl">Total Assets</div><div class="stat-val sv-blue">${allFacAssets.length}</div><div class="stat-sub">${currentFacility}</div></div>
+    <div class="stat-card sc-teal"><div class="stat-lbl">Fixed Assets</div><div class="stat-val sv-teal">${allFacAssets.filter(a=>(a.spendCategory||'Fixed Asset')==='Fixed Asset').length}</div><div class="stat-sub">Capital items</div></div>
+    <div class="stat-card sc-purple"><div class="stat-lbl">LVA</div><div class="stat-val sv-purple">${allFacAssets.filter(a=>a.spendCategory==='LVA').length}</div><div class="stat-sub">Low value assets</div></div>
     <div class="stat-card sc-yellow"><div class="stat-lbl">Total NBV</div><div class="stat-val sv-yellow" style="font-size:1.1rem">${fmtMoney(totalNBV)}</div><div class="stat-sub">Book value</div></div>
   </div>
-  <div class="sec-hd">
+  <div class="sec-hd" style="flex-wrap:wrap;gap:8px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sm ${currentSpendFilter==='all'?'btn-pri':'btn-sec'}" onclick="setAssetFilter('all')">All Assets</button>
+      <button class="btn btn-sm ${currentSpendFilter==='Fixed Asset'?'btn-pri':'btn-sec'}" onclick="setAssetFilter('Fixed Asset')">Fixed Assets</button>
+      <button class="btn btn-sm ${currentSpendFilter==='LVA'?'btn-pri':'btn-sec'}" onclick="setAssetFilter('LVA')">LVA</button>
+    </div>
     <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
       <input class="search" placeholder="Search assets..." value="${esc(assetSearch)}" oninput="assetSearch=this.value;renderAssets(document.getElementById('page-root'))">
       <select class="fsel" style="width:auto;padding:7px 10px;font-size:.77rem" onchange="assetFilter=this.value;renderAssets(document.getElementById('page-root'))">
@@ -1433,29 +1469,35 @@ function renderAssets(root){
     </div>
     <div style="display:flex;gap:7px;flex-wrap:wrap">
       <button class="btn btn-teal btn-sm" onclick="openMoveAsset()">↔️ Move Asset</button>
-      <label class="btn btn-sec btn-sm" style="cursor:pointer">📤 CSV<input type="file" accept=".csv" style="display:none" onchange="importCSV(this)"></label>
+      <button class="btn btn-sec btn-sm" onclick="downloadCSVTemplate()">📥 CSV Template</button>
+      <label class="btn btn-sec btn-sm" style="cursor:pointer">📤 Import CSV<input type="file" accept=".csv" style="display:none" onchange="importCSV(this)"></label>
       <button class="btn btn-pri btn-sm" onclick="openAssetModal(null)">+ Add Asset</button>
     </div>
   </div>
   <div class="tbl-wrap"><table>
-    <thead><tr><th>Tag</th><th>Asset Name</th><th>Serial</th><th>Location</th><th>Cost</th><th>NBV</th><th>Usage Hrs</th><th>Next Maint.</th><th>Status</th><th>Actions</th></tr></thead>
+    <thead><tr>
+      <th>Asset</th><th>Asset Name</th><th>Asset Status</th><th>Spend Cat.</th>
+      <th>Description</th><th>Date Acquired</th><th>Asset Cost</th><th>Net Book Value</th>
+      <th>Location</th><th>Asset Class</th><th>Asset Type</th><th>Actions</th>
+    </tr></thead>
     <tbody>
     ${fAssets.filter(a=>{
       const q=assetSearch.toLowerCase();
-      return (!q||a.name.toLowerCase().includes(q)||a.tag.toLowerCase().includes(q)||(a.location||'').toLowerCase().includes(q))&&(assetFilter==='All'||a.status===assetFilter);
+      return (!q||a.name.toLowerCase().includes(q)||a.tag.toLowerCase().includes(q)||(a.location||'').toLowerCase().includes(q));
     }).map(a=>{
-      const dc=daysUntil(a.maintenanceDate);
       return`<tr>
-        <td><span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--blue2)">${esc(a.tag)}</span></td>
-        <td><div style="display:flex;align-items:center;gap:9px">${a.photo?`<img src="${a.photo}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--border)">`:`<div style="width:36px;height:36px;border-radius:6px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;border:1px solid var(--border)">📷</div>`}<div><div style="font-weight:600;color:var(--t1);font-size:.82rem">${esc(a.name)}</div><div style="font-size:.68rem;color:var(--t3)">${esc(a.model||'')}</div></div></div></td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:.68rem">${esc(a.serial||'')}</td>
-        <td>${esc(a.location||'')}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${fmtMoney(a.cost)}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem">${fmtMoney(a.nbv)}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--teal)">${a.usageHours||0}h</td>
-        <td>${a.maintenanceDate?`<span class="pill pill-${dc<=30?'red':dc<=60?'yellow':'green'}">${fmtDate(a.maintenanceDate)}</span>`:'—'}</td>
-        <td>${a.status==='Faulty'&&a.faultyDate?`<span class="pill pill-red">Faulty</span><div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--red);margin-top:1px">${downtimeStr(a.faultyDate)}</div>`:`<span class="pill pill-${statusColor(a.status)}">${esc(a.status)}</span>`}</td>
-        <td><div style="display:flex;gap:2px">
+        <td><div style="display:flex;align-items:center;gap:7px">${a.photo?`<img src="${a.photo}" style="width:32px;height:32px;border-radius:5px;object-fit:cover;flex-shrink:0;border:1px solid var(--border)">`:`<div style="width:32px;height:32px;border-radius:5px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;border:1px solid var(--border)">📷</div>`}<span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--fac2);font-weight:700;white-space:nowrap">${esc(a.tag)}</span></div></td>
+        <td><div style="font-weight:600;color:var(--t1);font-size:.84rem;min-width:130px">${esc(a.name)}</div><div style="font-size:.7rem;color:var(--t3)">${esc(a.model||'')}</div></td>
+        <td>${a.status==='Faulty'&&a.faultyDate?`<span class="pill pill-red">Faulty</span><div style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--red);margin-top:1px">${downtimeStr(a.faultyDate)}</div>`:`<span class="pill pill-${statusColor(a.status)}">${esc(a.status)}</span>`}</td>
+        <td><span class="pill pill-${(a.spendCategory||'Fixed Asset')==='LVA'?'purple':'teal'}">${esc(a.spendCategory||'Fixed Asset')}</span></td>
+        <td style="max-width:160px;font-size:.78rem;color:var(--t2);white-space:normal;line-height:1.35">${esc((a.description||'—').substring(0,70))}${(a.description||'').length>70?'…':''}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:.74rem;white-space:nowrap">${fmtDate(a.dateAcquired)}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:.74rem;color:var(--yellow);white-space:nowrap">${fmtMoney(a.cost)}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:.74rem;color:var(--green);white-space:nowrap">${fmtMoney(a.nbv)}</td>
+        <td style="font-size:.82rem">${esc(a.location||'—')}</td>
+        <td style="font-size:.78rem;color:var(--t2);white-space:nowrap">${esc(a.assetClass||'—')}</td>
+        <td style="font-size:.78rem;color:var(--t2);white-space:nowrap">${esc(a.assetType||'—')}</td>
+        <td><div style="display:flex;gap:2px;flex-wrap:nowrap">
           <button class="btn btn-xs btn-sec" onclick="viewAsset('${a.id}')">👁️</button>
           <button class="btn btn-xs btn-sec" onclick="openAssetModal('${a.id}')">✏️</button>
           ${a.status==='Faulty'
@@ -1575,13 +1617,15 @@ function openAssetModal(id){
       </label>
     </div>
   </div>
-  <div class="frow"><div class="fg"><label class="flbl">Asset Name *</label><input class="finput" id="f-name" value="${v('name')}"></div><div class="fg"><label class="flbl">Finance Tag *</label><input class="finput" id="f-tag" value="${v('tag')}"></div></div>
-  <div class="frow"><div class="fg"><label class="flbl">Serial Number</label><input class="finput" id="f-serial" value="${v('serial')}"></div><div class="fg"><label class="flbl">Model</label><input class="finput" id="f-model" value="${v('model')}"></div></div>
+  <div class="frow"><div class="fg"><label class="flbl">Asset Name *</label><input class="finput" id="f-name" value="${v('name')}"></div><div class="fg"><label class="flbl">Asset Tag *</label><input class="finput" id="f-tag" value="${v('tag')}"></div></div>
+  <div class="frow"><div class="fg"><label class="flbl">Asset Status</label><select class="fsel" id="f-status">${['Active','Faulty','Under Maintenance','Disposed','Withdrawn'].map(s=>`<option ${a&&a.status===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="fg"><label class="flbl">Spend Category</label><select class="fsel" id="f-spend">${['Fixed Asset','LVA'].map(s=>`<option value="${s}" ${a&&a.spendCategory===s?'selected':''}>${s==='LVA'?'Low Value Asset (LVA)':s}</option>`).join('')}</select></div></div>
+  <div class="fg" style="margin-bottom:10px"><label class="flbl">Description</label><textarea class="ftxt" id="f-desc" rows="2">${v('description')}</textarea></div>
+  <div class="frow"><div class="fg"><label class="flbl">Date Acquired</label><input class="finput" type="date" id="f-acquired" value="${v('dateAcquired')}"></div><div class="fg"><label class="flbl">Serial Number</label><input class="finput" id="f-serial" value="${v('serial')}"></div></div>
+  <div class="frow"><div class="fg"><label class="flbl">Asset Cost (SGD)</label><input class="finput" type="number" id="f-cost" value="${a?a.cost:0}"></div><div class="fg"><label class="flbl">Net Book Value (SGD)</label><input class="finput" type="number" id="f-nbv" value="${a?a.nbv:0}"></div></div>
   <div class="frow"><div class="fg"><label class="flbl">Facility</label><select class="fsel" id="f-fac">${facOpts}</select></div><div class="fg"><label class="flbl">Location</label><input class="finput" id="f-location" value="${v('location')}"></div></div>
-  <div class="frow"><div class="fg"><label class="flbl">Cost (SGD)</label><input class="finput" type="number" id="f-cost" value="${a?a.cost:0}"></div><div class="fg"><label class="flbl">Net Book Value</label><input class="finput" type="number" id="f-nbv" value="${a?a.nbv:0}"></div></div>
-  <div class="frow"><div class="fg"><label class="flbl">Category</label><select class="fsel" id="f-cat">${['Manufacturing','Electronics','Fabrication','IT','Office','Safety','General'].map(c=>`<option ${a&&a.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="fg"><label class="flbl">Status</label><select class="fsel" id="f-status">${['Active','Faulty','Under Maintenance','Disposed','Withdrawn'].map(s=>`<option ${a&&a.status===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
-  <div class="frow"><div class="fg"><label class="flbl">Next Maintenance</label><input class="finput" type="date" id="f-mdate" value="${v('maintenanceDate')}"></div><div class="fg"><label class="flbl">Contract Expiry</label><input class="finput" type="date" id="f-cexp" value="${v('contractExpiry')}"></div></div>
-  <div class="frow"><div class="fg"><label class="flbl">Vendor</label><input class="finput" id="f-vendor" value="${v('vendor')}"></div><div class="fg"><label class="flbl">Current Usage Hours</label><input class="finput" type="number" id="f-hours" value="${a?a.usageHours||0:0}"></div></div>`,
+  <div class="frow"><div class="fg"><label class="flbl">Asset Class</label><input class="finput" id="f-aclass" value="${v('assetClass')}" placeholder="e.g. Machinery & Equipment"></div><div class="fg"><label class="flbl">Asset Type</label><input class="finput" id="f-atype" value="${v('assetType')}" placeholder="e.g. Printing Equipment"></div></div>
+  <div class="frow"><div class="fg"><label class="flbl">Model</label><input class="finput" id="f-model" value="${v('model')}"></div><div class="fg"><label class="flbl">Vendor</label><input class="finput" id="f-vendor" value="${v('vendor')}"></div></div>
+  <div class="frow"><div class="fg"><label class="flbl">Next Maintenance</label><input class="finput" type="date" id="f-mdate" value="${v('maintenanceDate')}"></div><div class="fg"><label class="flbl">Usage Hours</label><input class="finput" type="number" id="f-hours" value="${a?a.usageHours||0:0}"></div></div>`,
   `<button class="btn btn-sec" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveAsset('${id||''}')">💾 Save</button>`,'wide');
 }
 
@@ -1620,7 +1664,7 @@ function saveAsset(id){
   const existingAsset = id ? DB.assets.find(a=>a.id===id) : null;
   const photo = _pendingPhoto !== null ? _pendingPhoto : (existingAsset ? existingAsset.photo : null);
   _pendingPhoto = null;
-  const asset={name,tag,serial:document.getElementById('f-serial').value.trim(),model:document.getElementById('f-model').value.trim(),facility:document.getElementById('f-fac').value,location:document.getElementById('f-location').value.trim(),cost:parseFloat(document.getElementById('f-cost').value)||0,nbv:parseFloat(document.getElementById('f-nbv').value)||0,category:document.getElementById('f-cat').value,status:document.getElementById('f-status').value,maintenanceDate:document.getElementById('f-mdate').value||null,contractExpiry:document.getElementById('f-cexp').value||null,vendor:document.getElementById('f-vendor').value.trim(),usageHours:parseFloat(document.getElementById('f-hours').value)||0,photo};
+  const asset={name,tag,serial:document.getElementById('f-serial').value.trim(),model:document.getElementById('f-model').value.trim(),facility:document.getElementById('f-fac').value,location:document.getElementById('f-location').value.trim(),cost:parseFloat(document.getElementById('f-cost').value)||0,nbv:parseFloat(document.getElementById('f-nbv').value)||0,status:document.getElementById('f-status').value,spendCategory:document.getElementById('f-spend').value,description:document.getElementById('f-desc').value.trim(),dateAcquired:document.getElementById('f-acquired').value||null,assetClass:document.getElementById('f-aclass').value.trim(),assetType:document.getElementById('f-atype').value.trim(),maintenanceDate:document.getElementById('f-mdate').value||null,vendor:document.getElementById('f-vendor').value.trim(),usageHours:parseFloat(document.getElementById('f-hours').value)||0,photo};
   if(id){DB.assets=DB.assets.map(a=>a.id===id?{...a,...asset}:a);}
   else{DB.assets.push({...asset,id:'A'+Date.now(),faultyDate:null,pinX:50,pinY:50,lastUsed:null});}
   auditLog(id?'Edited asset':'Added asset',tag);
@@ -1663,6 +1707,16 @@ function exportAssetChecklist(){
   auditLog('Exported asset checklist',currentFacility);
 }
 
+function downloadCSVTemplate(){
+  const headers=['Asset','Asset Status','Spend Category','Asset Name','Description','Date Acquired','Asset Cost','Net Book Value (Posted/Accounted)','Location of Business Asset','Asset Class','Asset Type','Serial Number','Manufacturer','Model'];
+  const sample=['T11-FIN-001','Active','Fixed Asset','3D Printer Ultimaker S5','FDM 3D printer for prototyping','2022-03-01','12000','8000','T11C01 Bay A','Machinery & Equipment','Printing Equipment','UM-S5-1234','Ultimaker','S5'];
+  const csv=[headers.join(','),sample.join(',')].join('
+');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='FablabFacility_Asset_Template.csv';a.click();URL.revokeObjectURL(url);
+}
+
 function importCSV(inp){
   const f=inp.files[0];if(!f)return;
   if(!requireStaff())return;
@@ -1674,7 +1728,25 @@ function importCSV(inp){
     const imported=lines.slice(1).map((line,i)=>{
       const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
       const obj={};headers.forEach((h,idx)=>{obj[h]=vals[idx]||'';});
-      return{id:'CSV'+Date.now()+i,name:obj.name||obj['asset name']||'Unnamed',tag:obj.tag||obj['finance tag']||'',serial:obj.serial||'',model:obj.model||'',facility:obj.facility||currentFacility,location:obj.location||'',cost:parseFloat(obj.cost||0),nbv:parseFloat(obj.nbv||0),category:obj.category||'General',status:obj.status||'Active',vendor:obj.vendor||'',maintenanceDate:null,contractExpiry:null,photo:null,faultyDate:null,pinX:50,pinY:50,usageHours:0,lastUsed:null};
+      const loc=obj['location of business asset']||obj.location||obj['location'']||'';
+      const facMatch=DB.facilities.find(f=>loc.toLowerCase().includes(f.id.toLowerCase()))||null;
+      return{id:'CSV'+Date.now()+i,
+        tag:obj['asset']||obj.tag||obj['asset tag']||obj['finance tag']||'',
+        name:obj['asset name']||obj.name||'Unnamed',
+        status:obj['asset status']||obj.status||'Active',
+        spendCategory:obj['spend category']||obj['spendcategory']||'Fixed Asset',
+        description:obj['description']||obj.desc||'',
+        dateAcquired:obj['date acquired']||obj['dateacquired']||null,
+        cost:parseFloat(obj['asset cost']||obj.cost||0),
+        nbv:parseFloat(obj['net book value (posted/accounted)']||obj['net book value']||obj.nbv||0),
+        location:loc,
+        assetClass:obj['asset class']||obj.assetclass||'',
+        assetType:obj['asset type']||obj.assettype||'',
+        serial:obj['serial number']||obj.serial||'',
+        model:obj.model||'',
+        facility:facMatch?facMatch.id:currentFacility,
+        vendor:obj.vendor||obj.manufacturer||'',
+        maintenanceDate:null,contractExpiry:null,photo:null,faultyDate:null,pinX:50,pinY:50,usageHours:0,lastUsed:null};
     }).filter(a=>a.name&&a.name!=='Unnamed');
     DB.assets=[...DB.assets,...imported];
     auditLog('Imported CSV assets',`${imported.length} assets`);
@@ -2026,6 +2098,88 @@ function savePPMSetting(assetId,key,val){
 }
 
 // ═══════════════════════════════════════════════════════
+//  CHEMICALS SAFETY DATA SHEET
+// ═══════════════════════════════════════════════════════
+function facChemicals(){
+  if(!DB.chemicals[currentFacility])DB.chemicals[currentFacility]=[];
+  return DB.chemicals[currentFacility];
+}
+function renderChemicals(root){
+  const items=facChemicals();
+  root.innerHTML=`
+  <div class="sec-hd">
+    <div class="sec-title">🧪 Chemicals Safety Data Sheet — ${currentFacility}</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn btn-sec btn-sm" onclick="exportChemicalsSDS()">📄 Export SDS List</button>
+      <button class="btn btn-pri btn-sm" onclick="openChemicalModal(null)">+ Add Chemical</button>
+    </div>
+  </div>
+  <div class="alert al-info">📋 Maintain an up-to-date register of all hazardous chemicals used in ${currentFacility}. Attach SDS documents and ensure all staff are briefed on hazards.</div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Chemical Name</th><th>CAS No.</th><th>Hazard Class</th><th>Location Stored</th><th>Qty</th><th>Unit</th><th>SDS Ref</th><th>Last Reviewed</th><th>Reviewed By</th><th>Actions</th></tr></thead>
+    <tbody>
+    ${items.length===0?`<tr><td colspan="10"><div class="empty"><div class="empty-icon">🧪</div><div>No chemicals registered. Add chemicals to maintain your SDS register.</div></div></td></tr>`
+    :items.map(c=>`<tr>
+      <td><div style="font-weight:600;color:var(--t1)">${esc(c.name)}</div>${c.synonyms?`<div style="font-size:.7rem;color:var(--t3)">${esc(c.synonyms)}</div>`:'' }</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.74rem">${esc(c.cas||'—')}</td>
+      <td><span class="pill pill-${c.hazardClass==='Flammable'?'orange':c.hazardClass==='Corrosive'?'red':c.hazardClass==='Toxic'?'purple':c.hazardClass==='Oxidising'?'yellow':'blue'}">${esc(c.hazardClass||'—')}</span></td>
+      <td>${esc(c.location||'—')}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${c.qty||'—'}</td>
+      <td>${esc(c.unit||'')}</td>
+      <td style="font-size:.78rem;color:var(--blue2)">${c.sdsRef?`<a href="${esc(c.sdsRef)}" target="_blank" style="color:var(--fac2)">📎 View SDS</a>`:'—'}</td>
+      <td style="font-size:.74rem;font-family:'JetBrains Mono',monospace">${fmtDate(c.lastReviewed)}</td>
+      <td style="font-size:.78rem">${esc(c.reviewedBy||'—')}</td>
+      <td><div style="display:flex;gap:3px">
+        <button class="btn btn-xs btn-sec" onclick="openChemicalModal('${c.id}')">✏️</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteChemical('${c.id}')">🗑</button>
+      </div></td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+function openChemicalModal(id){
+  if(!requireStaff())return;
+  const c=id?facChemicals().find(x=>x.id===id):null;
+  const v=k=>c?esc(c[k]||''):'';
+  showModal(id?'Edit Chemical':'Add Chemical / SDS Entry',`
+  <div class="frow"><div class="fg"><label class="flbl">Chemical Name *</label><input class="finput" id="ch-name" value="${v('name')}"></div><div class="fg"><label class="flbl">CAS Number</label><input class="finput" id="ch-cas" value="${v('cas')}" placeholder="e.g. 67-64-1"></div></div>
+  <div class="fg" style="margin-bottom:10px"><label class="flbl">Synonyms / Trade Name</label><input class="finput" id="ch-syn" value="${v('synonyms')}"></div>
+  <div class="frow"><div class="fg"><label class="flbl">Hazard Class</label><select class="fsel" id="ch-hazard">${['Flammable','Corrosive','Toxic','Oxidising','Irritant','Carcinogenic','Environmental Hazard','Non-Hazardous'].map(h=>`<option ${c&&c.hazardClass===h?'selected':''}>${h}</option>`).join('')}</select></div><div class="fg"><label class="flbl">Location Stored</label><input class="finput" id="ch-loc" value="${v('location')}"></div></div>
+  <div class="frow"><div class="fg"><label class="flbl">Quantity</label><input class="finput" type="number" id="ch-qty" value="${c?c.qty||'':''}" placeholder="0"></div><div class="fg"><label class="flbl">Unit</label><select class="fsel" id="ch-unit">${['L','mL','kg','g','bottle','drum','container'].map(u=>`<option ${c&&c.unit===u?'selected':''}>${u}</option>`).join('')}</select></div></div>
+  <div class="fg" style="margin-bottom:10px"><label class="flbl">SDS Document URL / Reference</label><input class="finput" id="ch-sds" value="${v('sdsRef')}" placeholder="https://... or local reference code"></div>
+  <div class="frow"><div class="fg"><label class="flbl">Last Reviewed Date</label><input class="finput" type="date" id="ch-reviewed" value="${v('lastReviewed')}"></div><div class="fg"><label class="flbl">Reviewed By</label><input class="finput" id="ch-by" value="${currentStaff?.name||v('reviewedBy')}"></div></div>
+  <div class="fg" style="margin-bottom:10px"><label class="flbl">Notes / Special Precautions</label><textarea class="ftxt" id="ch-notes" rows="2">${v('notes')}</textarea></div>`,
+  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveChemical('${id||''}')">💾 Save</button>`,'wide');
+}
+function saveChemical(id){
+  if(!requireStaff())return;
+  const name=document.getElementById('ch-name').value.trim();
+  if(!name){alert('Chemical name required.');return;}
+  const obj={name,cas:document.getElementById('ch-cas').value.trim(),synonyms:document.getElementById('ch-syn').value.trim(),hazardClass:document.getElementById('ch-hazard').value,location:document.getElementById('ch-loc').value.trim(),qty:parseFloat(document.getElementById('ch-qty').value)||0,unit:document.getElementById('ch-unit').value,sdsRef:document.getElementById('ch-sds').value.trim(),lastReviewed:document.getElementById('ch-reviewed').value||null,reviewedBy:document.getElementById('ch-by').value.trim(),notes:document.getElementById('ch-notes').value.trim()};
+  const arr=facChemicals();
+  if(id){DB.chemicals[currentFacility]=arr.map(c=>c.id===id?{...c,...obj}:c);}
+  else{if(!DB.chemicals[currentFacility])DB.chemicals[currentFacility]=[];DB.chemicals[currentFacility].push({...obj,id:'CH'+Date.now()});}
+  auditLog(id?'Edited chemical SDS':'Added chemical SDS',name);
+  dbSave();closeModal();renderChemicals(document.getElementById('page-root'));
+}
+function deleteChemical(id){
+  const c=facChemicals().find(x=>x.id===id);if(!c)return;
+  if(!confirm(`Remove "${c.name}" from the SDS register?`))return;
+  DB.chemicals[currentFacility]=facChemicals().filter(x=>x.id!==id);
+  auditLog('Deleted chemical SDS',c.name);
+  dbSave();renderChemicals(document.getElementById('page-root'));
+}
+function exportChemicalsSDS(){
+  const items=facChemicals();
+  const lines=[`CHEMICALS SAFETY DATA SHEET REGISTER — ${currentFacility}`,'='.repeat(60),`Date: ${fmtDate(new Date().toISOString())}`,`Exported by: ${currentStaff?.name||'—'}`,`Total chemicals: ${items.length}`,``,`Chemical Name	CAS No.	Hazard Class	Location	Qty	Unit	SDS Ref	Last Reviewed	Reviewed By`,'─'.repeat(100),...items.map(c=>`${c.name}	${c.cas||'—'}	${c.hazardClass||'—'}	${c.location||'—'}	${c.qty||'—'}	${c.unit||'—'}	${c.sdsRef||'—'}	${fmtDate(c.lastReviewed)}	${c.reviewedBy||'—'}`)];
+  const blob=new Blob([lines.join('
+')],{type:'text/plain'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`${currentFacility}_chemicals_SDS_${todayStr()}.txt`;a.click();URL.revokeObjectURL(url);
+  auditLog('Exported chemicals SDS list',currentFacility);
+}
+
+// ═══════════════════════════════════════════════════════
 //  STAFF MANAGEMENT
 // ═══════════════════════════════════════════════════════
 function renderStaff(root){
@@ -2147,6 +2301,170 @@ function removeFacility(id){
     if(active)switchFacility(active.id);
   }
   populateFacilitySelect();renderFacilitiesAdmin(document.getElementById('page-root'));
+}
+
+// ═══════════════════════════════════════════════════════
+//  PASSCODE RECORDS (Password-protected vault)
+// ═══════════════════════════════════════════════════════
+// Vault uses a master password to XOR-encrypt stored passcodes.
+// Not military-grade, but prevents casual snooping in localStorage.
+let _vaultUnlocked=false;
+let _vaultKey='';
+
+function xorEncrypt(text,key){
+  if(!key)return text;
+  return btoa(Array.from(text).map((c,i)=>String.fromCharCode(c.charCodeAt(0)^key.charCodeAt(i%key.length))).join(''));
+}
+function xorDecrypt(enc,key){
+  if(!key)return enc;
+  try{const raw=atob(enc);return Array.from(raw).map((c,i)=>String.fromCharCode(c.charCodeAt(0)^key.charCodeAt(i%key.length))).join('');}catch(e){return null;}
+}
+function vaultHash(pw){
+  // Simple deterministic check — store a known test string encrypted
+  return xorEncrypt('FABLAB_VAULT_OK',pw);
+}
+
+function renderPasscodes(root){
+  root.innerHTML=`
+  <div class="sec-hd"><div class="sec-title">🔐 Passcode Records</div></div>
+  <div class="alert al-warn">⚠️ Passcode records are encrypted with a master password. Only authorised staff should access this vault. All access is logged.</div>
+  <div id="vault-ui"></div>`;
+  if(!_vaultUnlocked){
+    renderVaultLock();
+  } else {
+    renderVaultContents();
+  }
+}
+
+function renderVaultLock(){
+  const ui=document.getElementById('vault-ui');if(!ui)return;
+  const hasMaster=!!DB.vaultHash;
+  ui.innerHTML=`
+  <div class="card" style="max-width:420px;margin:24px auto">
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-size:2.5rem">🔒</div>
+      <div style="font-size:1rem;font-weight:700;margin-top:8px">${hasMaster?'Enter Master Password':'Set Master Password'}</div>
+      <div style="font-size:.82rem;color:var(--t3);margin-top:4px">${hasMaster?'Enter your vault master password to unlock passcode records':'Create a master password to protect your passcode vault'}</div>
+    </div>
+    <div class="fg"><label class="flbl">${hasMaster?'Master Password':'New Master Password'}</label><input class="finput" type="password" id="vault-pw" placeholder="Enter password..." onkeydown="if(event.key==='Enter')unlockVault()"></div>
+    ${!hasMaster?`<div class="fg" style="margin-top:8px"><label class="flbl">Confirm Password</label><input class="finput" type="password" id="vault-pw2" placeholder="Confirm password..."></div>`:''}
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button class="btn btn-pri" style="flex:1" onclick="${hasMaster?'unlockVault()':'setMasterPassword()'}">🔓 ${hasMaster?'Unlock Vault':'Create Vault'}</button>
+    </div>
+    <div id="vault-err" style="color:var(--red);font-size:.8rem;margin-top:8px;text-align:center"></div>
+  </div>`;
+}
+
+function setMasterPassword(){
+  const pw=document.getElementById('vault-pw')?.value;
+  const pw2=document.getElementById('vault-pw2')?.value;
+  if(!pw||pw.length<4){document.getElementById('vault-err').textContent='Password must be at least 4 characters.';return;}
+  if(pw!==pw2){document.getElementById('vault-err').textContent='Passwords do not match.';return;}
+  DB.vaultHash=vaultHash(pw);
+  _vaultKey=pw;_vaultUnlocked=true;
+  dbSave();auditLog('Created vault master password','Passcode vault initialised');
+  renderVaultContents();
+}
+
+function unlockVault(){
+  const pw=document.getElementById('vault-pw')?.value;
+  if(!pw){document.getElementById('vault-err').textContent='Enter your password.';return;}
+  const test=xorDecrypt(DB.vaultHash,pw);
+  if(test==='FABLAB_VAULT_OK'){
+    _vaultKey=pw;_vaultUnlocked=true;
+    auditLog('Unlocked passcode vault',currentStaff?.name||'Unknown');
+    renderVaultContents();
+  } else {
+    document.getElementById('vault-err').textContent='Incorrect password.';
+    auditLog('Failed vault unlock attempt',currentStaff?.name||'Unknown');
+  }
+}
+
+function lockVault(){
+  _vaultUnlocked=false;_vaultKey='';
+  navigate('passcodes');
+}
+
+function renderVaultContents(){
+  const ui=document.getElementById('vault-ui');if(!ui)return;
+  const records=(DB.passcodes||[]).map(r=>({...r,_dec:xorDecrypt(r.encPass,_vaultKey)}));
+  ui.innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="color:var(--green);font-size:.85rem">🔓 Vault Unlocked</span>
+      <button class="btn btn-xs btn-danger" onclick="lockVault()">🔒 Lock</button>
+    </div>
+    <button class="btn btn-pri btn-sm" onclick="openPasscodeModal(null)">+ Add Record</button>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Label / System</th><th>Username / ID</th><th>Password</th><th>Category</th><th>Notes</th><th>Last Updated</th><th>Actions</th></tr></thead>
+    <tbody>
+    ${records.length===0?`<tr><td colspan="7"><div class="empty"><div class="empty-icon">🔐</div><div>No passcode records. Add your first entry.</div></div></td></tr>`
+    :records.map(r=>`<tr>
+      <td><div style="font-weight:600;color:var(--t1)">${esc(r.label)}</div>${r.url?`<div style="font-size:.7rem;color:var(--t3)">${esc(r.url)}</div>`:''}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.8rem">${esc(r.username||'—')}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span id="pw-${r.id}" style="font-family:'JetBrains Mono',monospace;font-size:.82rem;letter-spacing:.05em">••••••••</span>
+          <button class="btn btn-xs btn-sec" onclick="togglePwVis('${r.id}','${encodeURIComponent(r._dec||'')}')">👁</button>
+          <button class="btn btn-xs btn-sec" onclick="copyToClip('${encodeURIComponent(r._dec||'')}')">📋</button>
+        </div>
+      </td>
+      <td><span class="pill pill-${r.category==='Network'?'blue':r.category==='Equipment'?'teal':r.category==='Software'?'purple':'orange'}">${esc(r.category||'Other')}</span></td>
+      <td style="font-size:.78rem;color:var(--t2);max-width:150px;white-space:normal">${esc(r.notes||'—')}</td>
+      <td style="font-size:.74rem;color:var(--t3);font-family:'JetBrains Mono',monospace">${fmtDate(r.updatedAt)}</td>
+      <td><div style="display:flex;gap:3px">
+        <button class="btn btn-xs btn-sec" onclick="openPasscodeModal('${r.id}')">✏️</button>
+        <button class="btn btn-xs btn-danger" onclick="deletePasscode('${r.id}')">🗑</button>
+      </div></td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function togglePwVis(id,encPw){
+  const el=document.getElementById('pw-'+id);if(!el)return;
+  el.textContent=el.textContent.includes('•')?decodeURIComponent(encPw):'••••••••';
+}
+function copyToClip(encPw){
+  const pw=decodeURIComponent(encPw);
+  navigator.clipboard.writeText(pw).then(()=>{
+    const btn=event.target;const orig=btn.textContent;
+    btn.textContent='✓';setTimeout(()=>{btn.textContent=orig;},1500);
+  }).catch(()=>alert('Clipboard not available. Use the show button.'));
+}
+
+function openPasscodeModal(id){
+  if(!_vaultUnlocked){alert('Unlock the vault first.');return;}
+  const r=id?(DB.passcodes||[]).find(x=>x.id===id):null;
+  const dec=r?xorDecrypt(r.encPass,_vaultKey)||'':'';
+  const v=k=>r?esc(r[k]||''):'';
+  showModal(id?'Edit Passcode Record':'Add Passcode Record',`
+  <div class="frow"><div class="fg"><label class="flbl">Label / System Name *</label><input class="finput" id="pc-label" value="${v('label')}" placeholder="e.g. WiFi Router Admin, Door Lock Code"></div><div class="fg"><label class="flbl">Category</label><select class="fsel" id="pc-cat">${['Network','Equipment','Software','Door/Access','Other'].map(c=>`<option ${r&&r.category===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
+  <div class="frow"><div class="fg"><label class="flbl">Username / ID</label><input class="finput" id="pc-user" value="${v('username')}" placeholder="admin, user ID, etc."></div><div class="fg"><label class="flbl">Password / Passcode</label><input class="finput" type="password" id="pc-pass" value="${esc(dec)}" placeholder="Enter passcode..."></div></div>
+  <div class="fg" style="margin-bottom:10px"><label class="flbl">URL / Location</label><input class="finput" id="pc-url" value="${v('url')}" placeholder="192.168.1.1 or https://..."></div>
+  <div class="fg" style="margin-bottom:10px"><label class="flbl">Notes</label><textarea class="ftxt" id="pc-notes" rows="2">${v('notes')}</textarea></div>`,
+  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="savePasscode('${id||''}')">💾 Save</button>`);
+}
+function savePasscode(id){
+  if(!_vaultUnlocked){alert('Vault is locked.');return;}
+  const label=document.getElementById('pc-label').value.trim();
+  if(!label){alert('Label required.');return;}
+  const rawPw=document.getElementById('pc-pass').value;
+  const obj={label,category:document.getElementById('pc-cat').value,username:document.getElementById('pc-user').value.trim(),encPass:xorEncrypt(rawPw,_vaultKey),url:document.getElementById('pc-url').value.trim(),notes:document.getElementById('pc-notes').value.trim(),updatedAt:new Date().toISOString(),updatedBy:currentStaff?.name||'Unknown'};
+  if(!DB.passcodes)DB.passcodes=[];
+  if(id){DB.passcodes=DB.passcodes.map(r=>r.id===id?{...r,...obj}:r);}
+  else{DB.passcodes.push({...obj,id:'PC'+Date.now()});}
+  auditLog(id?'Updated passcode record':'Added passcode record',label);
+  dbSave();closeModal();renderVaultContents();
+}
+function deletePasscode(id){
+  if(!_vaultUnlocked){alert('Vault is locked.');return;}
+  const r=DB.passcodes?.find(x=>x.id===id);if(!r)return;
+  if(!confirm(`Delete record "${r.label}"? This cannot be undone.`))return;
+  DB.passcodes=DB.passcodes.filter(x=>x.id!==id);
+  auditLog('Deleted passcode record',r.label);
+  dbSave();renderVaultContents();
 }
 
 // ═══════════════════════════════════════════════════════
