@@ -556,12 +556,13 @@ canvas{display:block;}
         <button class="nav-btn nav-sub" onclick="navigate('assets');setAssetFilter('Fixed Asset')" id="nav-assets-fa"><span class="nav-icon">🏗️</span><span class="nav-lbl">Fixed Assets</span></button>
         <button class="nav-btn nav-sub" onclick="navigate('assets');setAssetFilter('LVA')" id="nav-assets-lva"><span class="nav-icon">📦</span><span class="nav-lbl">Low Value Assets</span></button>
       </div>
-      <div class="nav-section">Safety & Checks</div>
+      <div class="nav-section">WSH</div>
       <button class="nav-btn" onclick="navigate('wsh-daily')" id="nav-wsh-daily"><span class="nav-icon">📅</span><span class="nav-lbl">Daily Checklist</span><span class="nav-badge" id="badge-daily" style="display:none">!</span></button>
       <button class="nav-btn" onclick="navigate('wsh-monthly')" id="nav-wsh-monthly"><span class="nav-icon">📆</span><span class="nav-lbl">Monthly Checklist</span></button>
       <button class="nav-btn" onclick="navigate('wsh-yearly')" id="nav-wsh-yearly"><span class="nav-icon">📊</span><span class="nav-lbl">Hazard Checklist</span></button>
       <button class="nav-btn" onclick="navigate('firstaid')" id="nav-firstaid"><span class="nav-icon">🩹</span><span class="nav-lbl">First Aid</span><span class="nav-badge amber" id="badge-fa" style="display:none">!</span></button>
       <button class="nav-btn" onclick="navigate('chemicals')" id="nav-chemicals"><span class="nav-icon">🧪</span><span class="nav-lbl">Chemicals SDS</span></button>
+      <button class="nav-btn" onclick="navigate('riskassessment')" id="nav-riskassessment"><span class="nav-icon">⚠️</span><span class="nav-lbl">Risk Assessment</span></button>
       <div class="nav-section">Operations</div>
       <button class="nav-btn" onclick="navigate('maintenance')" id="nav-maintenance"><span class="nav-icon">🔧</span><span class="nav-lbl">Maintenance</span><span class="nav-badge" id="badge-maint" style="display:none">!</span></button>
       <button class="nav-btn" onclick="navigate('analytics')" id="nav-analytics"><span class="nav-icon">📈</span><span class="nav-lbl">Analytics & PPM</span></button>
@@ -580,11 +581,17 @@ canvas{display:block;}
   <div id="main">
     <!-- SIGN-IN BAR -->
     <div id="signin-bar">
-      <span class="sb-label">Signed in as:</span>
-      <select id="staff-select" onchange="switchStaff(this.value)">
-        <option value="">— Select staff —</option>
-      </select>
-      <span id="signin-time" style="color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:.67rem;margin-left:auto;"></span>
+      <div id="signin-pre" style="display:flex;align-items:center;gap:8px;width:100%">
+        <span class="sb-label">Signed in as:</span>
+        <select id="staff-select" style="flex:1;min-width:0">
+          <option value="">— Select your name —</option>
+        </select>
+        <button id="signin-btn" class="btn btn-pri btn-sm" onclick="doSignIn()" style="white-space:nowrap;flex-shrink:0">Sign In</button>
+      </div>
+      <div id="signin-post" style="display:none;width:100%;align-items:center;gap:10px">
+        <span id="signin-greeting" style="font-size:1rem;font-weight:800;letter-spacing:-.01em;color:var(--fac2)"></span>
+        <span id="signin-time" style="color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-left:auto;white-space:nowrap"></span>
+      </div>
     </div>
     <!-- TOPBAR -->
     <div id="topbar">
@@ -665,10 +672,10 @@ let DB = {
   ],
   // Staff list
   staff: [
-    {id:'s1', name:'Yeo Gau Siong',   role:'Senior Technical Executive', active:true},
-    {id:'s2', name:'Chaik Haw Ren',   role:'Senior Technical Executive', active:true},
-    {id:'s3', name:'Florimond Chu',   role:'Lead Technical Executive',   active:true},
-    {id:'s4', name:'Mark Ng',         role:'Manager',                    active:true},
+    {id:'s1', name:'Yeo Gau Siong',   role:'Senior Technical Executive', active:true, facility:'T11C01'},
+    {id:'s2', name:'Chaik Haw Ren',   role:'Senior Technical Executive', active:true, facility:'T1442'},
+    {id:'s3', name:'Florimond Chu',   role:'Lead Technical Executive',   active:true, facility:'Makerspace'},
+    {id:'s4', name:'Mark Ng',         role:'Manager',                    active:true, facility:null},
   ],
   // Assets (per facility)
   assets: [],
@@ -696,6 +703,12 @@ let DB = {
   chemicals: {},
   // Passcode records (stored encrypted)
   passcodes: [],
+  // Maintenance log
+  maintenance: [],
+  // PPM settings
+  ppmSettings: {},
+  // Teams webhook
+  teamsWebhook: '',
 };
 
 // Current state
@@ -712,6 +725,15 @@ let wshTab='checklist'; // checklist / history
 async function dbLoad(){
   if(!window.storage)return;
   try{const r=await window.storage.get('fablab-v1');if(r)Object.assign(DB,JSON.parse(r.value));}catch(e){}
+  // Ensure all new fields exist (backward compat)
+  if(!DB.maintenance)DB.maintenance=[];
+  if(!DB.ppmSettings)DB.ppmSettings={};
+  if(!DB.teamsWebhook)DB.teamsWebhook='';
+  if(!DB.chemicals)DB.chemicals={};
+  if(!DB.passcodes)DB.passcodes=[];
+  if(!DB.wshHistory)DB.wshHistory=[];
+  if(!DB.firstAid)DB.firstAid={};
+  if(!DB.wshChecks)DB.wshChecks={};
 }
 async function dbSave(){
   if(!window.storage)return;
@@ -722,6 +744,8 @@ async function dbSave(){
 //  AUDIT LOG
 // ═══════════════════════════════════════════════════════
 function auditLog(action, details=''){
+  // Only log when a staff member is signed in (except the sign-in event itself)
+  if(!currentStaff && action!=='Signed in') return;
   const rec={
     id:'al'+Date.now(),
     ts:new Date().toISOString(),
@@ -736,12 +760,32 @@ function auditLog(action, details=''){
 // ═══════════════════════════════════════════════════════
 //  STAFF MANAGEMENT
 // ═══════════════════════════════════════════════════════
+function doSignIn(){
+  const sel=document.getElementById('staff-select');
+  if(!sel||!sel.value){alert('Please select your name first.');return;}
+  const s=DB.staff.find(x=>x.id===sel.value);
+  if(!s){alert('Staff member not found.');return;}
+  currentStaff=s;
+  // Lock the UI
+  document.getElementById('signin-pre').style.display='none';
+  const post=document.getElementById('signin-post');
+  post.style.display='flex';
+  const firstName=s.name.split(' ')[0];
+  document.getElementById('signin-greeting').innerHTML=`Hello! <strong>${esc(s.name)}</strong> <span style="font-size:.8rem;font-weight:400;color:var(--t3)">(${esc(s.role)})</span>`;
+  document.getElementById('signin-time').textContent=new Date().toLocaleString('en-SG');
+  // Auto-switch to staff home facility if assigned
+  const homeFac=s.facility;
+  if(homeFac&&DB.facilities.find(f=>f.id===homeFac&&f.active)){
+    switchFacility(homeFac);
+  }
+  auditLog('Signed in',s.name);
+  updateBadges();
+  navigate(currentPage);
+}
 function switchStaff(id){
+  // Legacy compat — unused now but kept for safety
   const s=DB.staff.find(x=>x.id===id);
   currentStaff=s||null;
-  const t=document.getElementById('signin-time');
-  if(t) t.textContent=s?new Date().toLocaleString('en-SG'):'';
-  if(s) auditLog('Signed in','Staff logged in');
 }
 
 function populateStaffSelect(){
@@ -761,7 +805,7 @@ function populateStaffSelect(){
 //  FACILITY MANAGEMENT
 // ═══════════════════════════════════════════════════════
 function switchFacility(id){
-  if(!DB.facilities.find(f=>f.id===id&&f.active)){alert('Facility is inactive.');return;}
+  if(!id||!DB.facilities.find(f=>f.id===id&&f.active))return;
   currentFacility=id;
   // Apply facility colour theme to whole page
   document.documentElement.setAttribute('data-facility',id);
@@ -841,7 +885,7 @@ function navigate(page){
     firstaid:'First Aid Inventory',maintenance:'Maintenance & Downtime',
     analytics:'Analytics & Predictive PPM',staff:'Staff Management',
     facilities:'Facilities Administration',auditlog:'Audit Log',
-    chemicals:'Chemicals Safety Data Sheet',passcodes:'Passcode Records'
+    chemicals:'Chemicals Safety Data Sheet',passcodes:'Passcode Records',riskassessment:'Risk Assessment'
   };
   document.getElementById('page-title').textContent=titles[page]||page;
   updateBadges();
@@ -860,6 +904,7 @@ function navigate(page){
   else if(page==='auditlog')renderAuditLog(root);
   else if(page==='chemicals')renderChemicals(root);
   else if(page==='passcodes')renderPasscodes(root);
+  else if(page==='riskassessment')renderRiskAssessment(root);
 }
 
 function updateBadges(){
@@ -1710,8 +1755,7 @@ function exportAssetChecklist(){
 function downloadCSVTemplate(){
   const headers=['Asset','Asset Status','Spend Category','Asset Name','Description','Date Acquired','Asset Cost','Net Book Value (Posted/Accounted)','Location of Business Asset','Asset Class','Asset Type','Serial Number','Manufacturer','Model'];
   const sample=['T11-FIN-001','Active','Fixed Asset','3D Printer Ultimaker S5','FDM 3D printer for prototyping','2022-03-01','12000','8000','T11C01 Bay A','Machinery & Equipment','Printing Equipment','UM-S5-1234','Ultimaker','S5'];
-  const csv=[headers.join(','),sample.join(',')].join('
-');
+  const csv=[headers.join(','),sample.join(',')].join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='FablabFacility_Asset_Template.csv';a.click();URL.revokeObjectURL(url);
@@ -1728,7 +1772,7 @@ function importCSV(inp){
     const imported=lines.slice(1).map((line,i)=>{
       const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
       const obj={};headers.forEach((h,idx)=>{obj[h]=vals[idx]||'';});
-      const loc=obj['location of business asset']||obj.location||obj['location'']||'';
+      const loc=obj['location of business asset']||obj.location||obj['location']||'';
       const facMatch=DB.facilities.find(f=>loc.toLowerCase().includes(f.id.toLowerCase()))||null;
       return{id:'CSV'+Date.now()+i,
         tag:obj['asset']||obj.tag||obj['asset tag']||obj['finance tag']||'',
@@ -2172,8 +2216,7 @@ function deleteChemical(id){
 function exportChemicalsSDS(){
   const items=facChemicals();
   const lines=[`CHEMICALS SAFETY DATA SHEET REGISTER — ${currentFacility}`,'='.repeat(60),`Date: ${fmtDate(new Date().toISOString())}`,`Exported by: ${currentStaff?.name||'—'}`,`Total chemicals: ${items.length}`,``,`Chemical Name	CAS No.	Hazard Class	Location	Qty	Unit	SDS Ref	Last Reviewed	Reviewed By`,'─'.repeat(100),...items.map(c=>`${c.name}	${c.cas||'—'}	${c.hazardClass||'—'}	${c.location||'—'}	${c.qty||'—'}	${c.unit||'—'}	${c.sdsRef||'—'}	${fmtDate(c.lastReviewed)}	${c.reviewedBy||'—'}`)];
-  const blob=new Blob([lines.join('
-')],{type:'text/plain'});
+  const blob=new Blob([lines.join('\n')],{type:'text/plain'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=`${currentFacility}_chemicals_SDS_${todayStr()}.txt`;a.click();URL.revokeObjectURL(url);
   auditLog('Exported chemicals SDS list',currentFacility);
@@ -2183,35 +2226,46 @@ function exportChemicalsSDS(){
 //  STAFF MANAGEMENT
 // ═══════════════════════════════════════════════════════
 function renderStaff(root){
+  const isManager=currentStaff?.role==='Manager';
   root.innerHTML=`
-  <div class="sec-hd"><div class="sec-title">Staff Management</div><button class="btn btn-pri btn-sm" onclick="openStaffModal(null)">+ Add Staff</button></div>
-  <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+  <div class="sec-hd"><div class="sec-title">Staff Management</div>${isManager?`<button class="btn btn-pri btn-sm" onclick="openStaffModal(null)">+ Add Staff</button>`:''}</div>
+  ${!isManager?`<div class="alert al-info">ℹ️ Only Managers can add, edit, or change facility assignments. Contact Mark Ng to make changes.</div>`:''}
+  <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Home Facility</th><th>Status</th><th>Actions</th></tr></thead><tbody>
   ${DB.staff.map(s=>`<tr>
     <td style="font-weight:600;color:var(--t1)">${esc(s.name)}</td>
-    <td>${esc(s.role)}</td>
+    <td style="color:var(--t2)">${esc(s.role)}</td>
+    <td>${s.facility?`<span class="fac-tag fac-${s.facility}">${s.facility}</span>`:`<span style="color:var(--t3);font-size:.8rem">All Facilities</span>`}</td>
     <td><span class="pill pill-${s.active?'green':'red'}">${s.active?'Active':'Inactive'}</span></td>
-    <td><div style="display:flex;gap:4px">
-      <button class="btn btn-xs btn-sec" onclick="openStaffModal('${s.id}')">✏️ Edit</button>
-      <button class="btn btn-xs btn-${s.active?'danger':'success'}" onclick="toggleStaff('${s.id}')">${s.active?'Deactivate':'Activate'}</button>
-      <button class="btn btn-xs btn-danger" onclick="deleteStaff('${s.id}')" title="Permanently remove">🗑</button>
+    <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+      ${isManager?`<button class="btn btn-xs btn-sec" onclick="openStaffModal('${s.id}')">✏️ Edit</button>`:''}
+      ${isManager?`<button class="btn btn-xs btn-${s.active?'danger':'success'}" onclick="toggleStaff('${s.id}')">${s.active?'Deactivate':'Activate'}</button>`:''}
+      ${isManager?`<button class="btn btn-xs btn-danger" onclick="deleteStaff('${s.id}')" title="Permanently remove">🗑</button>`:''}
+      ${!isManager?`<span style="font-size:.74rem;color:var(--t3)">—</span>`:''}
     </div></td>
   </tr>`).join('')}
   </tbody></table></div>
-  <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;font-size:.75rem;color:var(--t3)">
-    <strong style="color:var(--t2)">Note:</strong> All staff appear in the sign-in bar at the top. Every action (checklist submissions, asset changes, fault reports) is logged with the signed-in staff member's name and timestamp.
+  <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;font-size:.8rem;color:var(--t3)">
+    <strong style="color:var(--t2)">Note:</strong> Staff tagged to a facility will land on that facility after signing in. Managers see all facilities. Facility assignments can only be changed by a Manager.
   </div>`;
 }
 function openStaffModal(id){
+  if(currentStaff?.role!=='Manager'){alert('Only Managers can edit staff records.');return;}
   const s=id?DB.staff.find(x=>x.id===id):null;
+  const facOpts=`<option value="">All Facilities (Manager)</option>`+DB.facilities.filter(f=>f.active).map(f=>`<option value="${f.id}" ${s?.facility===f.id?'selected':''}>${f.name}</option>`).join('');
   showModal(id?'Edit Staff':'Add Staff Member',`
-  <div class="fg"><label class="flbl">Full Name</label><input class="finput" id="sm-name" value="${esc(s?.name||'')}"></div>
-  <div class="fg"><label class="flbl">Role / Position</label><input class="finput" id="sm-role" value="${esc(s?.role||'')}"></div>`,
+  <div class="frow">
+    <div class="fg"><label class="flbl">Full Name *</label><input class="finput" id="sm-name" value="${esc(s?.name||'')}"></div>
+    <div class="fg"><label class="flbl">Role / Position</label><input class="finput" id="sm-role" value="${esc(s?.role||'')}"></div>
+  </div>
+  <div class="fg"><label class="flbl">Home Facility</label><select class="fsel" id="sm-fac">${facOpts}</select></div>
+  <div class="alert al-info" style="margin-top:8px">Staff tagged to a facility will automatically land on that facility when they sign in. Leave as "All Facilities" for Managers who need access to all labs.</div>`,
   `<button class="btn btn-sec" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveStaff('${id||''}')">Save</button>`);
 }
 function saveStaff(id){
   const name=document.getElementById('sm-name').value.trim();
   if(!name){alert('Name required');return;}
-  const obj={name,role:document.getElementById('sm-role').value.trim(),active:true};
+  const fac=document.getElementById('sm-fac').value||null;
+  const obj={name,role:document.getElementById('sm-role').value.trim(),facility:fac,active:true};
   if(id){DB.staff=DB.staff.map(s=>s.id===id?{...s,...obj}:s);}
   else{DB.staff.push({...obj,id:'s'+Date.now()});}
   auditLog(id?'Edited staff':'Added staff',name);
@@ -2465,6 +2519,43 @@ function deletePasscode(id){
   DB.passcodes=DB.passcodes.filter(x=>x.id!==id);
   auditLog('Deleted passcode record',r.label);
   dbSave();renderVaultContents();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RISK ASSESSMENT
+// ═══════════════════════════════════════════════════════
+function renderRiskAssessment(root){
+  root.innerHTML=`
+  <div class="alert al-warn" style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:1.4rem">🚧</span>
+    <div>
+      <div style="font-weight:700;color:var(--yellow)">Section Under Development</div>
+      <div style="font-size:.82rem;margin-top:2px">Risk Assessment content will be added here. Placeholder prepared and ready for your input.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-hd">⚠️ Risk Assessment Register — ${currentFacility}</div>
+    <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">
+      <div style="font-size:.88rem;color:var(--t2);line-height:1.7">
+        This section will contain:
+        <ul style="margin:8px 0 0 18px;color:var(--t2);line-height:2">
+          <li>Risk Assessment forms per activity / equipment</li>
+          <li>Hazard identification and risk rating matrix</li>
+          <li>Control measures and responsible persons</li>
+          <li>Review dates and sign-off records</li>
+          <li>Incident reporting and follow-up tracking</li>
+        </ul>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:14px;border:1px dashed var(--border2)">
+        <div style="font-size:.78rem;font-family:'JetBrains Mono',monospace;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Awaiting Content</div>
+        <div style="font-size:.85rem;color:var(--t2)">Please provide the Risk Assessment template and requirements to populate this section.</div>
+      </div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="card-hd">📋 Pending Assessments</div><div class="empty" style="padding:20px"><div class="empty-icon">📝</div><div>No assessments yet</div></div></div>
+    <div class="card"><div class="card-hd">✅ Completed Assessments</div><div class="empty" style="padding:20px"><div class="empty-icon">✅</div><div>No completed records</div></div></div>
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════════════
