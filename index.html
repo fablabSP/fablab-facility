@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>FacilityOS — Multi-Facility WSH Platform</title>
+<title>Fablab Facility — Handy Platform</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ═══ THEME ═══════════════════════════════════ */
@@ -120,6 +120,11 @@ body{height:100dvh;background:var(--bg);color:var(--t1);font-family:'Plus Jakart
 .stats-2{grid-template-columns:1fr 1fr;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;transition:background .25s,box-shadow .15s;}
 .stat-card:hover{box-shadow:var(--shadow-sm);}
+.stat-card.clickable{cursor:pointer;user-select:none;}
+.stat-card.clickable:hover{box-shadow:var(--shadow);transform:translateY(-2px);border-color:var(--border2);}
+.stat-card.clickable:active{transform:scale(.97);}
+.stat-card-arrow{position:absolute;bottom:10px;right:12px;font-size:.7rem;color:var(--t3);opacity:.6;transition:opacity .15s,transform .15s;}
+.stat-card.clickable:hover .stat-card-arrow{opacity:1;transform:translateX(2px);}
 .stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 10px 10px;}
 .sc-blue::after{background:linear-gradient(90deg,var(--blue),#6366f1);}
 .sc-green::after{background:var(--green);}
@@ -495,8 +500,8 @@ canvas{display:block;}
       <div class="logo-wrap">
         <div class="logo-icon">🏗️</div>
         <div class="logo-text">
-          <div class="logo-name">Facility<em>OS</em></div>
-          <div class="logo-sub">WSH Platform</div>
+          <div class="logo-name">Fablab <em>Facility</em></div>
+          <div class="logo-sub">Handy Platform</div>
         </div>
       </div>
       <button class="sb-collapse-btn" onclick="toggleSidebar()">⟨</button>
@@ -554,7 +559,7 @@ canvas{display:block;}
       <button class="nav-btn" onclick="navigate('auditlog')" id="nav-auditlog"><span class="nav-icon">📋</span><span class="nav-lbl">Audit Log</span></button>
     </nav>
     <div class="sb-footer">
-      <span class="sb-version">v5.0 · FacilityOS</span>
+      <span class="sb-version">v1.0 · Fablab Facility</span>
     </div>
   </div>
 
@@ -689,11 +694,11 @@ let wshTab='checklist'; // checklist / history
 // ═══════════════════════════════════════════════════════
 async function dbLoad(){
   if(!window.storage)return;
-  try{const r=await window.storage.get('fos-v3');if(r)Object.assign(DB,JSON.parse(r.value));}catch(e){}
+  try{const r=await window.storage.get('fablab-v1');if(r)Object.assign(DB,JSON.parse(r.value));}catch(e){}
 }
 async function dbSave(){
   if(!window.storage)return;
-  try{await window.storage.set('fos-v3',JSON.stringify(DB));}catch(e){}
+  try{await window.storage.set('fablab-v1',JSON.stringify(DB));}catch(e){}
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1334,18 +1339,41 @@ function renderDashboard(root){
   const dailyState=getCheckState('daily',dailyKey);
   const dailyPct=dailyState.submitted?100:Math.round(DAILY_CHECKLIST.filter(i=>dailyState.answers[i.id]).length/DAILY_CHECKLIST.length*100);
   const g=new Date().getHours();
-  const greeting=g<12?'Good Morning':'Good Afternoon';
+  const greetWord=g<12?'Good Morning':g<18?'Good Afternoon':'Good Evening';
+  const greetEmoji=g<12?'🌤️':g<18?'👋':'🌙';
+  const staffName=currentStaff?`, ${currentStaff.name.split(' ')[0]}`:'';
 
   root.innerHTML=`
-  <div style="margin-bottom:18px">
-    <div style="font-size:1.35rem;font-weight:800;letter-spacing:-.03em">${greeting} 👋</div>
-    <div style="color:var(--t3);font-size:.77rem;margin-top:3px">${new Date().toLocaleDateString('en-SG',{weekday:'long',year:'numeric',month:'long',day:'numeric'})} · Viewing: <strong style="color:var(--t1)">${currentFacility}</strong></div>
+  <div style="margin-bottom:20px">
+    <div style="font-size:1.45rem;font-weight:800;letter-spacing:-.03em">${greetWord}${staffName} ${greetEmoji}</div>
+    <div style="color:var(--t3);font-size:.82rem;margin-top:4px">${new Date().toLocaleDateString('en-SG',{weekday:'long',year:'numeric',month:'long',day:'numeric'})} · Viewing: <strong style="color:var(--fac2)">${currentFacility}</strong></div>
+    <div style="font-size:.75rem;color:var(--t3);margin-top:3px;opacity:.6">Tap a card below to jump to that section</div>
   </div>
   <div class="stats-row stats-4" style="margin-bottom:14px">
-    <div class="stat-card sc-blue"><div class="stat-lbl">Total Assets</div><div class="stat-val sv-blue">${fAssets.length}</div><div class="stat-sub">${currentFacility}</div></div>
-    <div class="stat-card sc-red"><div class="stat-lbl">Faulty Now</div><div class="stat-val sv-red">${faulty.length}</div><div class="stat-sub">Equipment down</div></div>
-    <div class="stat-card sc-yellow"><div class="stat-lbl">Maint. Due</div><div class="stat-val sv-yellow">${mDue.length}</div><div class="stat-sub">Next 30 days</div></div>
-    <div class="stat-card sc-${faAlerts.length?'orange':'green'}"><div class="stat-lbl">First Aid</div><div class="stat-val sv-${faAlerts.length?'orange':'green'}">${faAlerts.length}</div><div class="stat-sub">${faAlerts.length?'Need attention':'All OK'}</div></div>
+    <div class="stat-card sc-blue clickable" onclick="navigate('assets')" title="View all assets">
+      <div class="stat-lbl">Total Assets</div>
+      <div class="stat-val sv-blue">${fAssets.length}</div>
+      <div class="stat-sub">${currentFacility}</div>
+      <span class="stat-card-arrow">→</span>
+    </div>
+    <div class="stat-card sc-red clickable" onclick="navigate('assets');setTimeout(()=>{document.querySelectorAll('.filter-btn').forEach(b=>{if(b.textContent==='Faulty')b.click();});},200)" title="View faulty equipment">
+      <div class="stat-lbl">Faulty Now</div>
+      <div class="stat-val sv-red">${faulty.length}</div>
+      <div class="stat-sub">Equipment down</div>
+      <span class="stat-card-arrow">→</span>
+    </div>
+    <div class="stat-card sc-yellow clickable" onclick="navigate('maintenance')" title="View maintenance schedule">
+      <div class="stat-lbl">Maint. Due</div>
+      <div class="stat-val sv-yellow">${mDue.length}</div>
+      <div class="stat-sub">Next 30 days</div>
+      <span class="stat-card-arrow">→</span>
+    </div>
+    <div class="stat-card sc-${faAlerts.length?'orange':'green'} clickable" onclick="navigate('firstaid')" title="View first aid inventory">
+      <div class="stat-lbl">First Aid</div>
+      <div class="stat-val sv-${faAlerts.length?'orange':'green'}">${faAlerts.length}</div>
+      <div class="stat-sub">${faAlerts.length?'Need attention':'All OK'}</div>
+      <span class="stat-card-arrow">→</span>
+    </div>
   </div>
   ${faulty.map(a=>`<div class="alert al-danger">🔴 <strong>${esc(a.name)}</strong> (${esc(a.tag)}) FAULTY — Down ${downtimeStr(a.faultyDate)}</div>`).join('')}
   <div class="g2" style="margin-bottom:14px">
