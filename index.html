@@ -588,9 +588,15 @@ canvas{display:block;}
         </select>
         <button id="signin-btn" class="btn btn-pri btn-sm" onclick="doSignIn()" style="white-space:nowrap;flex-shrink:0">Sign In</button>
       </div>
-      <div id="signin-post" style="display:none;width:100%;align-items:center;gap:10px">
-        <span id="signin-greeting" style="font-size:1rem;font-weight:800;letter-spacing:-.01em;color:var(--fac2)"></span>
-        <span id="signin-time" style="color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-left:auto;white-space:nowrap"></span>
+      <div id="signin-post" style="display:none;width:100%;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+          <div id="signin-greeting" style="font-size:.95rem;font-weight:800;letter-spacing:-.01em;color:var(--fac2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+          <div id="signin-viewing" style="font-size:.76rem;color:var(--t3);font-family:'Plus Jakarta Sans',sans-serif"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span id="signin-time" style="color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:.68rem;white-space:nowrap;display:none" class="hide-mobile"></span>
+          <button class="btn btn-xs btn-danger" onclick="doSignOut()" title="Sign out and reset login">🚪 Log Out</button>
+        </div>
       </div>
     </div>
     <!-- TOPBAR -->
@@ -672,10 +678,13 @@ let DB = {
   ],
   // Staff list
   staff: [
-    {id:'s1', name:'Yeo Gau Siong',   role:'Senior Technical Executive', active:true, facility:'T11C01'},
-    {id:'s2', name:'Chaik Haw Ren',   role:'Senior Technical Executive', active:true, facility:'T1442'},
+    {id:'s1', name:'Yeo Gau Siong',   role:'Senior Technical Executive', active:true, facility:'T1442'},
+    {id:'s2', name:'Chaik Haw Ren',   role:'Senior Technical Executive', active:true, facility:'T11C01'},
     {id:'s3', name:'Florimond Chu',   role:'Lead Technical Executive',   active:true, facility:'Makerspace'},
     {id:'s4', name:'Mark Ng',         role:'Manager',                    active:true, facility:null},
+    {id:'s5', name:'Louis Goh',       role:'Deputy Manager',             active:true, facility:null},
+    {id:'s6', name:'Willie Tay',      role:'Deputy Manager',             active:true, facility:null},
+    {id:'s7', name:'Steven Chew',     role:'Specialist',                 active:true, facility:null},
   ],
   // Assets (per facility)
   assets: [],
@@ -714,6 +723,34 @@ let DB = {
 // Current state
 let currentFacility = 'T11C01';
 let currentStaff = null; // {id, name, role}
+let wshUnlockedFacs = {}; // fac ids that current staff has explicitly unlocked for editing
+let wshReadOnly = false;  // set by renderWSH, read by renderWSHItem
+// Unified section unlock tracker: key = "section:facilityId" e.g. "maintenance:T11C01"
+let sectionUnlocked = {};
+
+function isSectionLocked(section){
+  // Returns true if current user is NOT owner of this facility section and hasn't unlocked it
+  if(!currentStaff) return false;
+  if(!currentStaff.facility) return false; // all-fac staff never locked
+  if(currentStaff.facility === currentFacility) return false; // own lab
+  return !sectionUnlocked[section + ':' + currentFacility];
+}
+function unlockSection(section, label){
+  sectionUnlocked[section + ':' + currentFacility] = true;
+  auditLog('Unlocked section for editing', label + ' — ' + currentFacility);
+  // Re-render whatever page is current
+  navigate(currentPage);
+}
+function sectionLockBanner(section, label, renderFn){
+  if(!isSectionLocked(section)) return '';
+  return `<div class="alert al-warn" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div>
+      <strong>🔒 \${currentFacility} — Not your assigned lab.</strong>
+      <div style="font-size:.8rem;margin-top:2px">You are viewing <em>\${label}</em> for \${currentFacility}. Unlock to make changes on behalf of the in-charge.</div>
+    </div>
+    <button class="btn btn-warn btn-sm" onclick="unlockSection('\${section}','\${label}')">🔓 Unlock to Edit</button>
+  </div>`;
+}
 let currentPage = 'dashboard';
 let assetView='list', assetSearch='', assetFilter='All';
 let maintTab='upcoming';
@@ -766,26 +803,88 @@ function doSignIn(){
   const s=DB.staff.find(x=>x.id===sel.value);
   if(!s){alert('Staff member not found.');return;}
   currentStaff=s;
-  // Lock the UI
+  // Lock the signin row
   document.getElementById('signin-pre').style.display='none';
-  const post=document.getElementById('signin-post');
-  post.style.display='flex';
-  const firstName=s.name.split(' ')[0];
-  document.getElementById('signin-greeting').innerHTML=`Hello! <strong>${esc(s.name)}</strong> <span style="font-size:.8rem;font-weight:400;color:var(--t3)">(${esc(s.role)})</span>`;
-  document.getElementById('signin-time').textContent=new Date().toLocaleString('en-SG');
-  // Auto-switch to staff home facility if assigned
-  const homeFac=s.facility;
-  if(homeFac&&DB.facilities.find(f=>f.id===homeFac&&f.active)){
-    switchFacility(homeFac);
+  document.getElementById('signin-post').style.display='flex';
+  // Update greeting
+  updateSigninBar();
+  // Route to home facility or all-facilities dashboard
+  if(s.facility && DB.facilities.find(f=>f.id===s.facility&&f.active)){
+    switchFacility(s.facility);
+  } else {
+    // All-facilities user — lock facility cards to view-only, go to dashboard
+    updateFacilityCardAccess();
+    navigate('dashboard');
   }
   auditLog('Signed in',s.name);
   updateBadges();
-  navigate(currentPage);
+}
+
+function updateSigninBar(){
+  const s=currentStaff;
+  if(!s)return;
+  const viewingText=isAllFacilities(s)
+    ? 'You are viewing: <strong>All Facilities</strong>'
+    : `You are now managing: <strong style="color:var(--fac2)">${currentFacility}</strong>`;
+  document.getElementById('signin-greeting').innerHTML=`Hello! <strong>${esc(s.name)}</strong> <span style="font-size:.76rem;font-weight:400;color:var(--t3)">(${esc(s.role)})</span>`;
+  document.getElementById('signin-viewing').innerHTML=viewingText;
+  const t=document.getElementById('signin-time');
+  if(t)t.textContent=new Date().toLocaleString('en-SG');
+}
+
+function updateFacilityCardAccess(){
+  // All-facilities users can switch freely; single-facility users see their card locked
+  const locked=currentStaff&&currentStaff.facility;
+  document.querySelectorAll('.fac-card').forEach(card=>{
+    if(locked){
+      card.style.pointerEvents='none';
+      card.style.opacity=card.id==='fac-card-'+currentStaff.facility?'1':'0.4';
+    } else {
+      card.style.pointerEvents='';
+      card.style.opacity='';
+    }
+  });
+}
+
+function doSignOut(){
+  // Show inline confirmation (avoid confirm() which may be blocked in iframes)
+  const bar=document.getElementById('signin-post');
+  // If already showing confirm, execute it
+  if(document.getElementById('logout-confirm-row')){
+    _executeSignOut();
+    return;
+  }
+  const row=document.createElement('div');
+  row.id='logout-confirm-row';
+  row.style.cssText='display:flex;align-items:center;gap:8px;margin-top:6px;background:rgba(239,68,68,.12);padding:6px 10px;border-radius:8px;border:1px solid rgba(239,68,68,.3);width:100%';
+  row.innerHTML='<span style="font-size:.8rem;color:var(--red);font-weight:600">Sign out?</span><button class="btn btn-xs btn-danger" onclick="_executeSignOut()">Yes, Sign Out</button><button class="btn btn-xs btn-sec" onclick="this.parentElement.remove()">Cancel</button>';
+  bar.appendChild(row);
+}
+function _executeSignOut(){
+  auditLog('Signed out',currentStaff?.name||'Unknown');
+  currentStaff=null;
+  wshUnlockedFacs={};
+  sectionUnlocked={};
+  // Reset signin bar
+  const pre=document.getElementById('signin-pre');
+  const post=document.getElementById('signin-post');
+  const sel=document.getElementById('staff-select');
+  if(pre)pre.style.display='flex';
+  if(post)post.style.display='none';
+  if(sel)sel.value='';
+  // Re-enable all facility cards
+  document.querySelectorAll('.fac-card').forEach(c=>{c.style.pointerEvents='';c.style.opacity='';});
+  navigate('dashboard');
+  updateBadges();
 }
 function switchStaff(id){
-  // Legacy compat — unused now but kept for safety
+  // Legacy compat
   const s=DB.staff.find(x=>x.id===id);
   currentStaff=s||null;
+}
+function isAllFacilities(staff){
+  // Returns true if staff should see ALL facilities dashboard
+  return !staff || !staff.facility;
 }
 
 function populateStaffSelect(){
@@ -822,6 +921,7 @@ function switchFacility(id){
   if(facSel)facSel.value=id;
   auditLog('Switched facility','Now viewing '+id);
   updateBadges();
+  updateSigninBar();
   navigate(currentPage);
 }
 
@@ -1133,11 +1233,23 @@ const YEARLY_CHECKLIST = [
 //  WSH CHECKLIST RENDER
 // ═══════════════════════════════════════════════════════
 function getCheckKey(period, dateKey){return`${currentFacility}-${period}-${dateKey}`;}
+function unlockWSHFac(facId){
+  wshUnlockedFacs[facId]=true;
+  renderWSH(document.getElementById('page-root'), 'daily');
+  auditLog('Unlocked WSH editing', `${facId} by ${currentStaff?.name}`);
+}
 function getCheckState(period, dateKey){return DB.wshChecks[getCheckKey(period,dateKey)]||{answers:{},remarks:{},submitted:false,submittedBy:'',submittedAt:''};}
 
 function renderWSH(root, period){
   const isDaily=(period==='daily'), isMonthly=(period==='monthly'), isYearly=(period==='yearly');
+  wshReadOnly=false; // reset for each render
   let dateKey, label, checklist, canSubmit=true, lockMsg='';
+
+  // Lock ALL WSH periods for non-home staff unless unlocked
+  const staffFac = currentStaff?.facility;
+  const isOwnFac = !staffFac || staffFac === currentFacility;
+  const isUnlocked = isOwnFac || !!wshUnlockedFacs[currentFacility];
+  wshReadOnly = !isOwnFac && !isUnlocked;
 
   if(isDaily){
     dateKey=todayStr();
@@ -1182,14 +1294,18 @@ function renderWSH(root, period){
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       ${isMonthly&&!canSubmit?`<span class="pill pill-yellow">🔒 Locked</span>`:''}
-      <button class="btn btn-success btn-sm" onclick="checkAllYes('${period}','${dateKey}')">✅ All Yes</button>
+      ${wshReadOnly?'':`<button class="btn btn-success btn-sm" onclick="checkAllYes('${period}','${dateKey}')">✅ All Yes</button>
       <button class="btn btn-danger btn-sm" onclick="checkAllNo('${period}','${dateKey}')">✖ All No</button>
       <button class="btn btn-sec btn-sm" onclick="checkAllNA('${period}','${dateKey}')">— All N/A</button>
       <button class="btn btn-warn btn-sm" onclick="checkClear('${period}','${dateKey}')">🗑 Clear</button>
-      ${state.submitted?`<button class="btn btn-teal btn-sm" onclick="duplicateWSH('${period}')">📋 Duplicate to Next</button>`:''}
+      ${state.submitted?`<button class="btn btn-teal btn-sm" onclick="duplicateWSH('${period}')">📋 Duplicate to Next</button>`:''}`}
       <button class="btn btn-sec btn-sm" onclick="exportWSH('${period}','${dateKey}')">⬇ Export</button>
     </div>
   </div>
+  ${wshReadOnly?`<div class="alert al-warn" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div><strong>🔒 ${currentFacility} — Not your assigned lab.</strong><div style="font-size:.8rem;margin-top:2px">This ${isDaily?'Daily':isMonthly?'Monthly':'Hazard'} checklist belongs to the ${currentFacility} in-charge. Unlock to fill in on behalf of a colleague.</div></div>
+    <button class="btn btn-warn btn-sm" onclick="unlockWSHFac('${currentFacility}')">🔓 Unlock to Edit</button>
+  </div>`:''}
   ${lockMsg?`<div class="alert al-warn">🔒 ${esc(lockMsg)}</div>`:''}
   ${state.submitted?`<div class="alert al-success">✓ Submitted ${fmtDateTime(state.submittedAt)} by ${esc(state.submittedBy)}</div>`:''}
   <div class="prog-wrap">
@@ -1206,9 +1322,10 @@ function renderWSH(root, period){
   }
   </div>
   <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:14px;border-top:1px solid var(--border)">
+    ${wshReadOnly?`<span style="color:var(--t3);font-size:.8rem">🔒 Read-only — unlock above to submit</span>`:`
     ${canSubmit&&!state.submitted?`<button class="btn btn-pri" onclick="submitWSH('${period}','${dateKey}')" ${answered===0?'disabled':''}>✓ Submit & Sign Off</button>`:''}
     ${state.submitted?`<button class="btn btn-warn btn-sm" onclick="reopenWSH('${period}','${dateKey}')">✏️ Reopen & Edit</button>`:''}
-    <span style="color:var(--t3);font-size:.72rem">All changes auto-saved</span>
+    <span style="color:var(--t3);font-size:.72rem">All changes auto-saved</span>`}
   </div>
   <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:18px">
     <div class="card-hd">Submission History</div>
@@ -1220,7 +1337,8 @@ function renderWSHItem(item, state, hasRemarks){
   const ans=state.answers[item.id]||'';
   const rem=state.remarks?.[item.id]||'';
   const cls=ans==='yes'?'ans-yes':ans==='no'?'ans-no':ans==='na'?'ans-na':'';
-  return`<div class="cl-item ${cls}" id="cli-${item.id}">
+  const roStyle=wshReadOnly?'pointer-events:none;opacity:.75;':'';
+  return`<div class="cl-item ${cls}" id="cli-${item.id}" style="${roStyle}">
     <div class="cl-num">${item.id.replace(/[a-z]/,'').replace(/\d+/,'').length?item.id:item.id}</div>
     <div style="flex:1">
       <div class="cl-text">${esc(item.text)}</div>
@@ -1395,6 +1513,11 @@ function exportWSHHistEntry(id){
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════
 function renderDashboard(root){
+  // Determine if we should show all-facilities or single-facility view
+  if(isAllFacilities(currentStaff)){
+    renderAllFacilitiesDashboard(root);
+    return;
+  }
   const fAssets=facAssets();
   const faulty=fAssets.filter(a=>a.status==='Faulty');
   const mDue=fAssets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=30);
@@ -1409,10 +1532,13 @@ function renderDashboard(root){
   const staffName=currentStaff?`, ${currentStaff.name.split(' ')[0]}`:'';
 
   root.innerHTML=`
-  <div style="margin-bottom:20px">
+  <div style="margin-bottom:16px">
     <div style="font-size:1.45rem;font-weight:800;letter-spacing:-.03em">${greetWord}${staffName} ${greetEmoji}</div>
     <div style="color:var(--t3);font-size:.82rem;margin-top:4px">${new Date().toLocaleDateString('en-SG',{weekday:'long',year:'numeric',month:'long',day:'numeric'})} · Viewing: <strong style="color:var(--fac2)">${currentFacility}</strong></div>
-    <div style="font-size:.75rem;color:var(--t3);margin-top:3px;opacity:.6">Tap a card below to jump to that section</div>
+    <div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-pri" onclick="navigate('dashboard')" title="Your facility dashboard">📍 My Lab (${currentFacility})</button>
+      <button class="btn btn-sm btn-sec" onclick="renderAllFacilitiesDashboard(document.getElementById('page-root'))" title="View all facilities">🌐 All Facilities</button>
+    </div>
   </div>
   <div class="stats-row stats-4" style="margin-bottom:14px">
     <div class="stat-card sc-blue clickable" onclick="navigate('assets')" title="View all assets">
@@ -1441,23 +1567,54 @@ function renderDashboard(root){
     </div>
   </div>
   ${faulty.map(a=>`<div class="alert al-danger">🔴 <strong>${esc(a.name)}</strong> (${esc(a.tag)}) FAULTY — Down ${downtimeStr(a.faultyDate)}</div>`).join('')}
-  <div class="g2" style="margin-bottom:14px">
-    <div class="card">
-      <div class="card-hd">Today's Daily Checklist
-        <span class="pill pill-${dailyState.submitted?'green':dailyPct>0?'yellow':'red'}">${dailyState.submitted?'Submitted':dailyPct+'%'}</span>
+  <!-- Daily checklist for all 3 labs -->
+  <div style="font-size:.76rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:8px">Daily Workshop Safety Checklist</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+  ${DB.facilities.filter(f=>f.active).map(f=>{
+    const dKey=todayStr();
+    const dState=DB.wshChecks[`${f.id}-daily-${dKey}`];
+    const dDone=dState?.submitted;
+    const dPct=dDone?100:Math.round(DAILY_CHECKLIST.filter(i=>dState?.answers?.[i.id]).length/DAILY_CHECKLIST.length*100);
+    const isHome=f.id===currentFacility;
+    return`<div class="card" style="border:2px solid ${isHome?'var(--fac)':'var(--border)'};cursor:pointer;transition:border-color .2s,box-shadow .15s" onclick="switchFacility('${f.id}');navigate('wsh-daily')" title="Open Daily Checklist for ${f.id}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span class="fac-tag fac-${f.id}" style="font-size:.78rem">${f.id}</span>
+        ${isHome?'<span style="font-size:.62rem;color:var(--fac2);font-weight:700">YOUR LAB</span>':''}
       </div>
-      ${dailyState.submitted
-        ?`<div style="color:var(--green);font-size:.8rem">✓ Completed by ${esc(dailyState.submittedBy)}</div>`
-        :`<div style="font-size:.78rem;color:var(--t3);margin-bottom:8px">${DAILY_CHECKLIST.filter(i=>dailyState.answers[i.id]).length}/${DAILY_CHECKLIST.length} items answered</div>
-        <button class="btn btn-pri btn-sm" onclick="navigate('wsh-daily')">Open Checklist →</button>`}
-    </div>
-    <div class="card">
-      <div class="card-hd">All Facilities Status</div>
-      ${DB.facilities.filter(f=>f.active).map(f=>{
-        const fa2=DB.assets.filter(a=>a.facility===f.id&&a.status==='Faulty').length;
-        return`<div class="card-row"><span class="fac-tag fac-${f.id}">${f.id}</span><span style="font-size:.75rem;color:var(--t2)">${DB.assets.filter(a=>a.facility===f.id).length} assets</span>${fa2>0?`<span class="pill pill-red">${fa2} faulty</span>`:`<span class="pill pill-green">OK</span>`}</div>`;
-      }).join('')}
-    </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span class="pill pill-${dDone?'green':dPct>0?'yellow':'red'}" style="font-size:.7rem">${dDone?'✓ Done':dPct+'%'}</span>
+        ${dDone?`<span style="font-size:.68rem;color:var(--t3)">by ${esc(dState.submittedBy||'—')}</span>`:'<span style="font-size:.68rem;color:var(--t3)">Pending</span>'}
+      </div>
+      <div style="margin-top:8px;font-size:.7rem;color:var(--t3)">Tap to ${isHome?'open':'switch & open'} →</div>
+    </div>`;
+  }).join('')}
+  </div>
+  <!-- Facility active status row -->
+  <div style="font-size:.76rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:8px">All Labs at a Glance</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+  ${DB.facilities.filter(f=>f.active).map(f=>{
+    const fA=DB.assets.filter(a=>a.facility===f.id);
+    const fFaulty=fA.filter(a=>a.status==='Faulty').length;
+    const fMDue=fA.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=30).length;
+    const isHome=f.id===currentFacility;
+    return`<div class="card" style="border:2px solid ${isHome?'var(--fac)':'var(--border)'};cursor:pointer" onclick="switchFacility('${f.id}');navigate('dashboard')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span class="fac-tag fac-${f.id}">${f.id}</span>
+        ${isHome?'<span style="font-size:.62rem;color:var(--fac2);font-weight:700">ACTIVE</span>':'<span style="font-size:.62rem;color:var(--t3)">Switch →</span>'}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="text-align:center;padding:6px;background:var(--surface2);border-radius:6px">
+          <div style="font-size:1.1rem;font-weight:800;color:var(--blue2)">${fA.length}</div>
+          <div style="font-size:.6rem;color:var(--t3);text-transform:uppercase">Assets</div>
+        </div>
+        <div style="text-align:center;padding:6px;background:var(--surface2);border-radius:6px">
+          <div style="font-size:1.1rem;font-weight:800;color:var(--${fFaulty?'red':'green'})">${fFaulty}</div>
+          <div style="font-size:.6rem;color:var(--t3);text-transform:uppercase">Faulty</div>
+        </div>
+      </div>
+      ${fMDue?`<div style="margin-top:6px"><span class="pill pill-yellow" style="font-size:.65rem">${fMDue} maint due</span></div>`:''}
+    </div>`;
+  }).join('')}
   </div>
   <div class="g2">
     <div class="card">
@@ -1474,10 +1631,151 @@ function renderDashboard(root){
 }
 
 // ═══════════════════════════════════════════════════════
+//  ALL-FACILITIES DASHBOARD (for Managers / Deputy Managers / All-access staff)
+// ═══════════════════════════════════════════════════════
+function renderAllFacilitiesDashboard(root){
+  const g=new Date().getHours();
+  const greetWord=g<12?'Good Morning':g<18?'Good Afternoon':'Good Evening';
+  const greetEmoji=g<12?'🌤️':g<18?'👋':'🌙';
+  const staffName=currentStaff?`, ${currentStaff.name.split(' ')[0]}`:'';
+  const activeFacs=DB.facilities.filter(f=>f.active);
+  // All-facilities aggregates
+  const allAssets=DB.assets;
+  const totalAssets=allAssets.length;
+  const totalFaulty=allAssets.filter(a=>a.status==='Faulty').length;
+  const totalMDue=allAssets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=30).length;
+  const totalFA=Object.values(DB.firstAid).flat().filter(i=>faStatus(i)!=='OK').length;
+  const totalNBV=allAssets.reduce((s,a)=>s+Number(a.nbv||0),0);
+
+  root.innerHTML=`
+  <div style="margin-bottom:16px">
+    <div style="font-size:1.45rem;font-weight:800;letter-spacing:-.03em">${greetWord}${staffName} ${greetEmoji}</div>
+    <div style="font-size:.82rem;color:var(--t3);margin-top:4px">${new Date().toLocaleDateString('en-SG',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+    <div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap">
+      ${currentStaff?.facility?`<button class="btn btn-sm btn-sec" onclick="switchFacility('${currentStaff?.facility}');navigate('dashboard')" title="Go back to your lab">📍 My Lab (${currentStaff?.facility||''})</button>`:''}
+      <button class="btn btn-sm btn-pri" disabled>🌐 All Facilities</button>
+    </div>
+  </div>
+  <!-- Summary stat cards -->
+  <div class="stats-row stats-4" style="margin-bottom:16px">
+    <div class="stat-card sc-blue clickable" onclick="navigate('assets')" title="All assets across all labs">
+      <div class="stat-lbl">Total Assets</div><div class="stat-val sv-blue">${totalAssets}</div>
+      <div class="stat-sub">All facilities</div><span class="stat-card-arrow">→</span>
+    </div>
+    <div class="stat-card sc-red clickable" onclick="navigate('assets')" title="Faulty equipment">
+      <div class="stat-lbl">Faulty Now</div><div class="stat-val sv-red">${totalFaulty}</div>
+      <div class="stat-sub">Across all labs</div><span class="stat-card-arrow">→</span>
+    </div>
+    <div class="stat-card sc-yellow clickable" onclick="navigate('maintenance')">
+      <div class="stat-lbl">Maint. Due</div><div class="stat-val sv-yellow">${totalMDue}</div>
+      <div class="stat-sub">Next 30 days</div><span class="stat-card-arrow">→</span>
+    </div>
+    <div class="stat-card sc-${totalFA?'orange':'green'} clickable" onclick="navigate('firstaid')">
+      <div class="stat-lbl">First Aid Alerts</div><div class="stat-val sv-${totalFA?'orange':'green'}">${totalFA}</div>
+      <div class="stat-sub">${totalFA?'Need attention':'All OK'}</div><span class="stat-card-arrow">→</span>
+    </div>
+  </div>
+  <!-- Daily checklist all labs -->
+  <div style="font-size:.76rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:8px">Daily Workshop Safety Checklist</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+  ${activeFacs.map(f=>{
+    const dKey=todayStr();
+    const dState=DB.wshChecks[`${f.id}-daily-${dKey}`];
+    const dDone=dState?.submitted;
+    const dPct=dDone?100:Math.round(DAILY_CHECKLIST.filter(i=>dState?.answers?.[i.id]).length/DAILY_CHECKLIST.length*100);
+    return`<div class="card" style="cursor:pointer;transition:box-shadow .15s" onclick="switchFacility('${f.id}');navigate('wsh-daily')" title="Open Daily Checklist for ${f.id}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span class="fac-tag fac-${f.id}" style="font-size:.78rem">${f.id}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="pill pill-${dDone?'green':dPct>0?'yellow':'red'}" style="font-size:.7rem">${dDone?'✓ Done':dPct+'%'}</span>
+        ${dDone?`<span style="font-size:.68rem;color:var(--t3)">by ${esc(dState.submittedBy||'—')}</span>`:'<span style="font-size:.68rem;color:var(--t3)">Pending</span>'}
+      </div>
+      <div style="margin-top:8px;font-size:.7rem;color:var(--t3)">Tap to open →</div>
+    </div>`;
+  }).join('')}
+  </div>
+  <!-- Per-facility breakdown -->
+  <div style="font-size:.78rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:10px">Facility Breakdown</div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+  ${activeFacs.map(f=>{
+    const fA=DB.assets.filter(a=>a.facility===f.id);
+    const fFaulty=fA.filter(a=>a.status==='Faulty');
+    const fMDue=fA.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=30);
+    const fFA=(DB.firstAid[f.id]||[]).filter(i=>faStatus(i)!=='OK');
+    const fNBV=fA.reduce((s,a)=>s+Number(a.nbv||0),0);
+    const dailyKey=todayStr();
+    const dState=DB.wshChecks[`${f.id}-daily-${dailyKey}`];
+    const dailyDone=dState?.submitted;
+    return`<div class="card" style="cursor:pointer;transition:box-shadow .15s" onclick="switchFacility('${f.id}');navigate('dashboard')">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="fac-tag fac-${f.id}" style="font-size:.9rem;padding:5px 14px">${f.id}</span>
+          <span style="font-size:.82rem;color:var(--t3)">${fA.length} assets · NBV ${fmtMoney(fNBV)}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${fFaulty.length?`<span class="pill pill-red">⚠️ ${fFaulty.length} faulty</span>`:'<span class="pill pill-green">✓ Operational</span>'}
+          ${fFA.length?`<span class="pill pill-orange">🩹 ${fFA.length} first aid</span>`:''}
+          ${fMDue.length?`<span class="pill pill-yellow">🔧 ${fMDue.length} due</span>`:''}
+          <span class="pill pill-${dailyDone?'green':'red'}">${dailyDone?'✓ Daily done':'⚠ Daily pending'}</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        ${['T11C01','T1442','Makerspace'].includes(f.id)?`
+        <div style="text-align:center;padding:8px;background:var(--surface2);border-radius:7px">
+          <div style="font-size:1.3rem;font-weight:800;color:var(--blue2)">${fA.length}</div>
+          <div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:.07em">Assets</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--surface2);border-radius:7px">
+          <div style="font-size:1.3rem;font-weight:800;color:var(--${fFaulty.length?'red':'green'})">${fFaulty.length}</div>
+          <div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:.07em">Faulty</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--surface2);border-radius:7px">
+          <div style="font-size:1.3rem;font-weight:800;color:var(--${fMDue.length?'yellow':'green'})">${fMDue.length}</div>
+          <div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:.07em">Maint Due</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--surface2);border-radius:7px">
+          <div style="font-size:1.3rem;font-weight:800;color:var(--${fFA.length?'orange':'green'})">${fFA.length}</div>
+          <div style="font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:.07em">FA Alerts</div>
+        </div>`:``}
+      </div>
+      <div style="margin-top:8px;font-size:.74rem;color:var(--t3)">Tap to switch to this facility →</div>
+    </div>`;
+  }).join('')}
+  </div>
+  <!-- Quick access -->
+  <div class="g2">
+    <div class="card">
+      <div class="card-hd">🔴 All Active Faults</div>
+      ${DB.assets.filter(a=>a.status==='Faulty').length===0
+        ?`<div class="empty" style="padding:16px"><div class="empty-icon">✅</div><div>All equipment operational</div></div>`
+        :DB.assets.filter(a=>a.status==='Faulty').map(a=>`<div class="card-row">
+          <div><div style="font-size:.82rem;font-weight:600;color:var(--red)">${esc(a.name)}</div><div style="font-size:.7rem;color:var(--t3)">${esc(a.tag)} · ${a.facility}</div></div>
+          <span class="pill pill-red">${downtimeStr(a.faultyDate)}</span>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-hd">📊 Portfolio Summary</div>
+      <div class="card-row"><span style="color:var(--t2)">Total Assets</span><strong>${totalAssets}</strong></div>
+      <div class="card-row"><span style="color:var(--t2)">Total NBV</span><strong style="color:var(--green)">${fmtMoney(totalNBV)}</strong></div>
+      <div class="card-row"><span style="color:var(--t2)">Fixed Assets</span><strong>${DB.assets.filter(a=>(a.spendCategory||'Fixed Asset')==='Fixed Asset').length}</strong></div>
+      <div class="card-row"><span style="color:var(--t2)">LVA</span><strong>${DB.assets.filter(a=>a.spendCategory==='LVA').length}</strong></div>
+      <div class="card-row"><span style="color:var(--t2)">Active Facilities</span><strong>${activeFacs.length}</strong></div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
 //  ASSETS
 // ═══════════════════════════════════════════════════════
 let currentSpendFilter='all';
+let assetFacilityFilter='current'; // 'current' or 'all'
 function setAssetFilter(f){currentSpendFilter=f;renderAssets(document.getElementById('page-root'));}
+function setAssetFacFilter(f){assetFacilityFilter=f;renderAssets(document.getElementById('page-root'));}
+function getAssetsForView(){
+  if(assetFacilityFilter==='all') return DB.assets;
+  return facAssets(); // current facility only
+}
 function toggleSubNav(id){
   const el=document.getElementById(id);
   const arrow=document.getElementById(id.replace('-sub','-sub-arrow'));
@@ -1487,15 +1785,22 @@ function toggleSubNav(id){
 }
 
 function renderAssets(root){
-  const allFacAssets=facAssets();
+  // Single-facility staff always see their own lab; all-fac staff can toggle
+  if(!isAllFacilities(currentStaff)) assetFacilityFilter='current';
+  const allFacAssets=getAssetsForView();
   const fAssets=currentSpendFilter==='all'?allFacAssets:allFacAssets.filter(a=>(a.spendCategory||'Fixed Asset')===currentSpendFilter);
   const faulty=allFacAssets.filter(a=>a.status==='Faulty');
-  const upcoming=allFacAssets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=60&&daysUntil(a.maintenanceDate)>=0);
   const totalNBV=allFacAssets.reduce((s,a)=>s+Number(a.nbv||0),0);
+  const viewLabel=assetFacilityFilter==='all'?'All Facilities':currentFacility;
   root.innerHTML=`
-  ${faulty.length>0?`<div class="alert al-danger">⚠️ ${faulty.length} asset(s) FAULTY in ${currentFacility}</div>`:''}
+  ${faulty.length>0?`<div class="alert al-danger">⚠️ ${faulty.length} asset(s) FAULTY in ${viewLabel}</div>`:''}
+  ${isAllFacilities(currentStaff)?`<div style="display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+    <span style="font-size:.8rem;color:var(--t3)">Viewing:</span>
+    <button class="btn btn-sm ${assetFacilityFilter==='current'?'btn-pri':'btn-sec'}" onclick="setAssetFacFilter('current')">📍 ${currentFacility}</button>
+    <button class="btn btn-sm ${assetFacilityFilter==='all'?'btn-pri':'btn-sec'}" onclick="setAssetFacFilter('all')">🌐 All Labs</button>
+  </div>`:''}
   <div class="stats-row stats-4">
-    <div class="stat-card sc-blue"><div class="stat-lbl">Total Assets</div><div class="stat-val sv-blue">${allFacAssets.length}</div><div class="stat-sub">${currentFacility}</div></div>
+    <div class="stat-card sc-blue"><div class="stat-lbl">Total Assets</div><div class="stat-val sv-blue">${allFacAssets.length}</div><div class="stat-sub">${viewLabel}</div></div>
     <div class="stat-card sc-teal"><div class="stat-lbl">Fixed Assets</div><div class="stat-val sv-teal">${allFacAssets.filter(a=>(a.spendCategory||'Fixed Asset')==='Fixed Asset').length}</div><div class="stat-sub">Capital items</div></div>
     <div class="stat-card sc-purple"><div class="stat-lbl">LVA</div><div class="stat-val sv-purple">${allFacAssets.filter(a=>a.spendCategory==='LVA').length}</div><div class="stat-sub">Low value assets</div></div>
     <div class="stat-card sc-yellow"><div class="stat-lbl">Total NBV</div><div class="stat-val sv-yellow" style="font-size:1.1rem">${fmtMoney(totalNBV)}</div><div class="stat-sub">Book value</div></div>
@@ -1522,6 +1827,7 @@ function renderAssets(root){
   <div class="tbl-wrap"><table>
     <thead><tr>
       <th>Asset</th><th>Asset Name</th><th>Asset Status</th><th>Spend Cat.</th>
+      ${assetFacilityFilter==='all'?'<th>Facility</th>':''}
       <th>Description</th><th>Date Acquired</th><th>Asset Cost</th><th>Net Book Value</th>
       <th>Location</th><th>Asset Class</th><th>Asset Type</th><th>Actions</th>
     </tr></thead>
@@ -1534,6 +1840,7 @@ function renderAssets(root){
         <td><div style="display:flex;align-items:center;gap:7px">${a.photo?`<img src="${a.photo}" style="width:32px;height:32px;border-radius:5px;object-fit:cover;flex-shrink:0;border:1px solid var(--border)">`:`<div style="width:32px;height:32px;border-radius:5px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;border:1px solid var(--border)">📷</div>`}<span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--fac2);font-weight:700;white-space:nowrap">${esc(a.tag)}</span></div></td>
         <td><div style="font-weight:600;color:var(--t1);font-size:.84rem;min-width:130px">${esc(a.name)}</div><div style="font-size:.7rem;color:var(--t3)">${esc(a.model||'')}</div></td>
         <td>${a.status==='Faulty'&&a.faultyDate?`<span class="pill pill-red">Faulty</span><div style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--red);margin-top:1px">${downtimeStr(a.faultyDate)}</div>`:`<span class="pill pill-${statusColor(a.status)}">${esc(a.status)}</span>`}</td>
+        ${assetFacilityFilter==='all'?`<td><span class="fac-tag fac-${a.facility}">${a.facility}</span></td>`:''}
         <td><span class="pill pill-${(a.spendCategory||'Fixed Asset')==='LVA'?'purple':'teal'}">${esc(a.spendCategory||'Fixed Asset')}</span></td>
         <td style="max-width:160px;font-size:.78rem;color:var(--t2);white-space:normal;line-height:1.35">${esc((a.description||'—').substring(0,70))}${(a.description||'').length>70?'…':''}</td>
         <td style="font-family:'JetBrains Mono',monospace;font-size:.74rem;white-space:nowrap">${fmtDate(a.dateAcquired)}</td>
@@ -1809,7 +2116,9 @@ function renderFirstAid(root){
   const exp=items.filter(i=>i._s==='Expiring');
   const low=items.filter(i=>i._s==='Low');
   const ok=items.filter(i=>i._s==='OK');
+  const locked=isSectionLocked('firstaid');
   root.innerHTML=`
+  ${sectionLockBanner('firstaid','First Aid Inventory')}
   ${crit.length>0?`<div class="alert al-danger">🚨 ${crit.length} item(s) CRITICAL in ${currentFacility}</div>`:''}
   <div class="stats-row stats-4">
     <div class="stat-card sc-red"><div class="stat-lbl">Critical</div><div class="stat-val sv-red">${crit.length}</div><div class="stat-sub">Zero/expired</div></div>
@@ -1820,9 +2129,9 @@ function renderFirstAid(root){
   <div class="sec-hd">
     <div class="sec-title">First Aid — ${currentFacility}</div>
     <div style="display:flex;gap:7px;flex-wrap:wrap">
-      <button class="btn btn-warn btn-sm" onclick="exportFAChecklist()" >📄 Export Checklist</button>
+      <button class="btn btn-warn btn-sm" onclick="exportFAChecklist()">📄 Export Checklist</button>
       <button class="btn btn-warn btn-sm" onclick="generateFAEmail()" ${crit.length+exp.length+low.length===0?'disabled':''}>📧 Replenish Email</button>
-      <button class="btn btn-pri btn-sm" onclick="openFAModal(null)">+ Add Item</button>
+      ${locked?'':`<button class="btn btn-pri btn-sm" onclick="openFAModal(null)">+ Add Item</button>`}
     </div>
   </div>
   <div class="tbl-wrap"><table>
@@ -1836,7 +2145,7 @@ function renderFirstAid(root){
       <td>${fmtDate(item.expiry)}</td>
       <td><span class="pill pill-${d<=0?'red':d<=60?'orange':d<=180?'yellow':'green'}">${d<=0?'EXP':d+'d'}</span></td>
       <td><span class="pill pill-${faColor(item._s)}">${item._s}</span></td>
-      <td><div style="display:flex;gap:2px"><button class="btn btn-xs btn-success" onclick="replenishFA('${item.id}')">↑ Qty</button><button class="btn btn-xs btn-sec" onclick="openFAModal('${item.id}')">✏️</button></div></td>
+      <td><div style="display:flex;gap:2px">${locked?'<span style="font-size:.72rem;color:var(--t3)">🔒</span>':`<button class="btn btn-xs btn-success" onclick="replenishFA('${item.id}')">↑ Qty</button><button class="btn btn-xs btn-sec" onclick="openFAModal('${item.id}')">✏️</button>`}</div></td>
     </tr>`;}).join('')}
     </tbody>
   </table></div>`;
@@ -1899,7 +2208,9 @@ function renderMaintenance(root){
   const fAssets=facAssets();
   const faulty=fAssets.filter(a=>a.status==='Faulty');
   const upcoming=fAssets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=60).sort((a,b)=>new Date(a.maintenanceDate)-new Date(b.maintenanceDate));
+  const maintLocked=isSectionLocked('maintenance');
   root.innerHTML=`
+  ${sectionLockBanner('maintenance','Maintenance')}
   <div class="stats-row stats-4">
     <div class="stat-card sc-red"><div class="stat-lbl">Faulty Now</div><div class="stat-val sv-red">${faulty.length}</div><div class="stat-sub">Down</div></div>
     <div class="stat-card sc-yellow"><div class="stat-lbl">Due (60d)</div><div class="stat-val sv-yellow">${upcoming.length}</div><div class="stat-sub">Maint.</div></div>
@@ -1919,6 +2230,7 @@ function renderMaintenance(root){
 function renderMaintContent(){
   const el=document.getElementById('maint-content');if(!el)return;
   const fAssets=facAssets();
+  const maintLocked=isSectionLocked('maintenance');
   if(maintTab==='upcoming'){
     const upcoming=fAssets.filter(a=>a.maintenanceDate&&daysUntil(a.maintenanceDate)<=60).sort((a,b)=>new Date(a.maintenanceDate)-new Date(b.maintenanceDate));
     el.innerHTML=upcoming.length===0?`<div class="empty"><div class="empty-icon">✅</div><div>No maintenance due in 60 days</div></div>`
@@ -1942,9 +2254,10 @@ function renderMaintContent(){
           <div style="margin-top:8px"><div style="font-size:.62rem;color:var(--t3);text-transform:uppercase;letter-spacing:.08em">DOWNTIME</div><div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:var(--red);font-weight:500">${downtimeStr(a.faultyDate)}</div><div style="font-size:.68rem;color:var(--t3)">Since ${fmtDate(a.faultyDate)}</div></div>
         </div>
         <div style="display:flex;gap:7px;flex-direction:column">
+          ${maintLocked?`<span class="pill pill-yellow" style="text-align:center">🔒 View only</span>`:`
           <button class="btn btn-success btn-sm" onclick="clearFaultMaint('${a.id}')">✓ Restored</button>
           <button class="btn btn-danger btn-sm" onclick="notifyTeams('${a.id}')">📢 Notify Teams</button>
-          <button class="btn btn-sec btn-sm" onclick="logMaintenanceAction('${a.id}')">📝 Log Action</button>
+          <button class="btn btn-sec btn-sm" onclick="logMaintenanceAction('${a.id}')">📝 Log Action</button>`}
         </div>
       </div>
     </div>`).join('');
@@ -1954,14 +2267,14 @@ function renderMaintContent(){
       <td style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--blue2)">${esc(a.tag)}</td>
       <td>${esc(a.name)}</td><td>${esc(a.location)}</td>
       <td><span class="pill pill-${statusColor(a.status)}">${esc(a.status)}</span></td>
-      <td>${a.status==='Faulty'
+      <td>${maintLocked?'<span style="font-size:.72rem;color:var(--t3)">🔒</span>':a.status==='Faulty'
         ?`<button class="btn btn-xs btn-success" onclick="clearFaultMaint('${a.id}')">✓ Restore</button>`
-        :`<button class="btn btn-xs btn-danger" onclick="markFaultyMaint('${a.id}')">⚠️ Fault</button>`}</td>
+        :`<button class="btn btn-xs btn-danger" onclick="openFaultWithLog('${a.id}')">⚠️ Fault</button>`}</td>
     </tr>`).join('')}</tbody></table></div></div>`;
     el.innerHTML=html;
   } else if(maintTab==='log'){
     const logs=DB.maintenance.filter(m=>m.facility===currentFacility).slice(0,20);
-    el.innerHTML=`<div class="sec-hd"><div class="sec-title">Maintenance Records</div><button class="btn btn-pri btn-sm" onclick="logMaintenanceAction(null)">+ Log Entry</button></div>
+    el.innerHTML=`<div class="sec-hd"><div class="sec-title">Maintenance Records</div>${maintLocked?'':`<button class="btn btn-pri btn-sm" onclick="logMaintenanceAction(null)">+ Log Entry</button>`}</div>
     ${logs.length===0?`<div class="empty"><div class="empty-icon">📋</div><div>No maintenance records yet</div></div>`
     :`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Asset</th><th>Type</th><th>Technician</th><th>Notes</th><th>Status</th></tr></thead><tbody>
     ${logs.map(m=>`<tr>
@@ -1987,6 +2300,17 @@ function markFaultyMaint(id){
   auditLog('Marked faulty (maintenance)',a?.tag||id);
   sendTeamsMsg(a,'down');dbSave();updateBadges();renderMaintenance(document.getElementById('page-root'));
 }
+function openFaultWithLog(id){
+  // Mark faulty AND immediately open the Log Action modal — fault only sticks after logging
+  if(!requireStaff())return;
+  const a=DB.assets.find(x=>x.id===id);if(!a)return;
+  // Temporarily mark faulty in memory (will persist when log is saved)
+  DB.assets=DB.assets.map(x=>x.id===id?{...x,status:'Faulty',faultyDate:new Date().toISOString()}:x);
+  dbSave();updateBadges();
+  sendTeamsMsg(a,'down');
+  // Open log modal — saving it will confirm the fault
+  logMaintenanceAction(id, true /*isFault*/);
+}
 function clearFaultMaint(id){
   if(!requireStaff())return;
   const a=DB.assets.find(x=>x.id===id);
@@ -2006,26 +2330,49 @@ function sendTeamsMsg(a,state){
   fetch(wh,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(msg)}).then(()=>alert('✓ Teams notified')).catch(e=>alert('Teams error: '+e.message));
 }
 
-function logMaintenanceAction(assetId){
+function logMaintenanceAction(assetId, isFault){
   if(!requireStaff())return;
   const assetOpts=facAssets().map(a=>`<option value="${a.id}" ${a.id===assetId?'selected':''}>${esc(a.tag)} — ${esc(a.name)}</option>`).join('');
-  showModal('Log Maintenance Action',`
+  const title = isFault ? '⚠️ Report Fault & Log Action' : 'Log Maintenance Action';
+  const faultBanner = isFault ? `<div class="alert al-danger">⚠️ This asset will be marked <strong>FAULTY</strong>. Please describe the fault below — this log is required to confirm the fault report.</div>` : '';
+  showModal(title,`
+  ${faultBanner}
   <div class="fg"><label class="flbl">Asset</label><select class="fsel" id="ml-asset">${assetOpts}</select></div>
   <div class="frow">
-    <div class="fg"><label class="flbl">Type</label><select class="fsel" id="ml-type"><option>Corrective</option><option>Preventive</option><option>Calibration</option><option>Inspection</option></select></div>
+    <div class="fg"><label class="flbl">Type</label><select class="fsel" id="ml-type">
+      <option ${isFault?'selected':''}>Corrective</option>
+      <option>Preventive</option><option>Calibration</option><option>Inspection</option>
+    </select></div>
     <div class="fg"><label class="flbl">Date</label><input class="finput" type="date" id="ml-date" value="${todayStr()}"></div>
   </div>
   <div class="fg"><label class="flbl">Technician</label><input class="finput" id="ml-tech" value="${currentStaff?.name||''}"></div>
-  <div class="fg"><label class="flbl">Notes / Actions Taken</label><textarea class="ftxt" id="ml-notes"></textarea></div>
-  <div class="fg"><label class="flbl">Resolved?</label><select class="fsel" id="ml-res"><option value="true">Yes — Issue Resolved</option><option value="false">No — Still Pending</option></select></div>`,
-  `<button class="btn btn-sec" onclick="closeModal()">Cancel</button><button class="btn btn-pri" onclick="saveMaintenanceLog()">💾 Save</button>`);
+  <div class="fg"><label class="flbl">${isFault?'Fault Description *':'Notes / Actions Taken'}</label>
+    <textarea class="ftxt" id="ml-notes" placeholder="${isFault?'Describe the fault, symptoms, and any immediate actions taken...':''}"></textarea></div>
+  <div class="fg"><label class="flbl">Status</label><select class="fsel" id="ml-res">
+    <option value="false" ${isFault?'selected':''}>No — Still Pending (Fault active)</option>
+    <option value="true" ${!isFault?'selected':''}>Yes — Issue Resolved</option>
+  </select></div>`,
+  `<button class="btn btn-sec" onclick="${isFault?'_cancelFault(\'' + assetId + '\')':'closeModal()'}">Cancel</button>
+   <button class="btn btn-pri" onclick="saveMaintenanceLog(${isFault?'true':''})">💾 ${isFault?'Confirm Fault Report':'Save'}</button>`);
 }
-function saveMaintenanceLog(){
+function _cancelFault(id){
+  // User cancelled — undo the temporary fault mark
+  DB.assets=DB.assets.map(a=>a.id===id?{...a,status:'Active',faultyDate:null}:a);
+  dbSave();updateBadges();closeModal();renderMaintenance(document.getElementById('page-root'));
+}
+function saveMaintenanceLog(isFault){
+  const notes=document.getElementById('ml-notes').value.trim();
+  if(isFault && !notes){alert('Please describe the fault before confirming.');return;}
   const a=DB.assets.find(x=>x.id===document.getElementById('ml-asset').value);
-  const rec={id:'ML'+Date.now(),facility:currentFacility,assetId:a?.id||'',assetName:a?.name||'',type:document.getElementById('ml-type').value,date:document.getElementById('ml-date').value,technician:document.getElementById('ml-tech').value,notes:document.getElementById('ml-notes').value,resolved:document.getElementById('ml-res').value==='true',loggedBy:currentStaff?.name||'',loggedAt:new Date().toISOString()};
+  const resolved=document.getElementById('ml-res').value==='true';
+  // If logging a fault and marking resolved in same step, restore the asset
+  if(isFault && resolved){
+    DB.assets=DB.assets.map(x=>x.id===a?.id?{...x,status:'Active',faultyDate:null}:x);
+  }
+  const rec={id:'ML'+Date.now(),facility:currentFacility,assetId:a?.id||'',assetName:a?.name||'',type:document.getElementById('ml-type').value,date:document.getElementById('ml-date').value,technician:document.getElementById('ml-tech').value,notes,resolved,loggedBy:currentStaff?.name||'',loggedAt:new Date().toISOString(),isFault:!!isFault};
   DB.maintenance=[rec,...DB.maintenance];
-  auditLog('Logged maintenance action',`${a?.tag||''} — ${rec.type}`);
-  dbSave();closeModal();renderMaintenance(document.getElementById('page-root'));
+  auditLog(isFault?'Reported fault':'Logged maintenance action',`${a?.tag||''} — ${rec.type}`);
+  dbSave();closeModal();updateBadges();renderMaintenance(document.getElementById('page-root'));
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2150,12 +2497,14 @@ function facChemicals(){
 }
 function renderChemicals(root){
   const items=facChemicals();
+  const locked=isSectionLocked('chemicals');
   root.innerHTML=`
+  ${sectionLockBanner('chemicals','Chemicals SDS Register')}
   <div class="sec-hd">
     <div class="sec-title">🧪 Chemicals Safety Data Sheet — ${currentFacility}</div>
     <div style="display:flex;gap:7px;flex-wrap:wrap">
       <button class="btn btn-sec btn-sm" onclick="exportChemicalsSDS()">📄 Export SDS List</button>
-      <button class="btn btn-pri btn-sm" onclick="openChemicalModal(null)">+ Add Chemical</button>
+      ${locked?'':`<button class="btn btn-pri btn-sm" onclick="openChemicalModal(null)">+ Add Chemical</button>`}
     </div>
   </div>
   <div class="alert al-info">📋 Maintain an up-to-date register of all hazardous chemicals used in ${currentFacility}. Attach SDS documents and ensure all staff are briefed on hazards.</div>
@@ -2174,8 +2523,8 @@ function renderChemicals(root){
       <td style="font-size:.74rem;font-family:'JetBrains Mono',monospace">${fmtDate(c.lastReviewed)}</td>
       <td style="font-size:.78rem">${esc(c.reviewedBy||'—')}</td>
       <td><div style="display:flex;gap:3px">
-        <button class="btn btn-xs btn-sec" onclick="openChemicalModal('${c.id}')">✏️</button>
-        <button class="btn btn-xs btn-danger" onclick="deleteChemical('${c.id}')">🗑</button>
+        ${locked?'<span style="font-size:.72rem;color:var(--t3)">🔒</span>':`<button class="btn btn-xs btn-sec" onclick="openChemicalModal('${c.id}')">✏️</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteChemical('${c.id}')">🗑</button>`}
       </div></td>
     </tr>`).join('')}
     </tbody>
@@ -2226,30 +2575,26 @@ function exportChemicalsSDS(){
 //  STAFF MANAGEMENT
 // ═══════════════════════════════════════════════════════
 function renderStaff(root){
-  const isManager=currentStaff?.role==='Manager';
   root.innerHTML=`
-  <div class="sec-hd"><div class="sec-title">Staff Management</div>${isManager?`<button class="btn btn-pri btn-sm" onclick="openStaffModal(null)">+ Add Staff</button>`:''}</div>
-  ${!isManager?`<div class="alert al-info">ℹ️ Only Managers can add, edit, or change facility assignments. Contact Mark Ng to make changes.</div>`:''}
+  <div class="sec-hd"><div class="sec-title">Staff Management</div><button class="btn btn-pri btn-sm" onclick="openStaffModal(null)">+ Add Staff</button></div>
   <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Home Facility</th><th>Status</th><th>Actions</th></tr></thead><tbody>
   ${DB.staff.map(s=>`<tr>
     <td style="font-weight:600;color:var(--t1)">${esc(s.name)}</td>
     <td style="color:var(--t2)">${esc(s.role)}</td>
-    <td>${s.facility?`<span class="fac-tag fac-${s.facility}">${s.facility}</span>`:`<span style="color:var(--t3);font-size:.8rem">All Facilities</span>`}</td>
+    <td>${s.facility?`<span class="fac-tag fac-${s.facility}">${s.facility}</span>`:`<span style="font-size:.8rem;color:var(--t3);background:var(--surface2);padding:3px 8px;border-radius:12px;border:1px solid var(--border)">🌐 All Facilities</span>`}</td>
     <td><span class="pill pill-${s.active?'green':'red'}">${s.active?'Active':'Inactive'}</span></td>
     <td><div style="display:flex;gap:4px;flex-wrap:wrap">
-      ${isManager?`<button class="btn btn-xs btn-sec" onclick="openStaffModal('${s.id}')">✏️ Edit</button>`:''}
-      ${isManager?`<button class="btn btn-xs btn-${s.active?'danger':'success'}" onclick="toggleStaff('${s.id}')">${s.active?'Deactivate':'Activate'}</button>`:''}
-      ${isManager?`<button class="btn btn-xs btn-danger" onclick="deleteStaff('${s.id}')" title="Permanently remove">🗑</button>`:''}
-      ${!isManager?`<span style="font-size:.74rem;color:var(--t3)">—</span>`:''}
+      <button class="btn btn-xs btn-sec" onclick="openStaffModal('${s.id}')">✏️ Edit</button>
+      <button class="btn btn-xs btn-${s.active?'danger':'success'}" onclick="toggleStaff('${s.id}')">${s.active?'Deactivate':'Activate'}</button>
+      <button class="btn btn-xs btn-danger" onclick="deleteStaff('${s.id}')" title="Permanently remove">🗑</button>
     </div></td>
   </tr>`).join('')}
   </tbody></table></div>
   <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;font-size:.8rem;color:var(--t3)">
-    <strong style="color:var(--t2)">Note:</strong> Staff tagged to a facility will land on that facility after signing in. Managers see all facilities. Facility assignments can only be changed by a Manager.
+    <strong style="color:var(--t2)">Note:</strong> Staff tagged to a specific facility land on that lab after sign-in. Staff with <strong>All Facilities</strong> access see a cross-facility dashboard and can switch between labs freely.
   </div>`;
 }
 function openStaffModal(id){
-  if(currentStaff?.role!=='Manager'){alert('Only Managers can edit staff records.');return;}
   const s=id?DB.staff.find(x=>x.id===id):null;
   const facOpts=`<option value="">All Facilities (Manager)</option>`+DB.facilities.filter(f=>f.active).map(f=>`<option value="${f.id}" ${s?.facility===f.id?'selected':''}>${f.name}</option>`).join('');
   showModal(id?'Edit Staff':'Add Staff Member',`
@@ -2525,7 +2870,9 @@ function deletePasscode(id){
 //  RISK ASSESSMENT
 // ═══════════════════════════════════════════════════════
 function renderRiskAssessment(root){
+  const locked=isSectionLocked('riskassessment');
   root.innerHTML=`
+  ${sectionLockBanner('riskassessment','Risk Assessment')}
   <div class="alert al-warn" style="display:flex;align-items:center;gap:10px">
     <span style="font-size:1.4rem">🚧</span>
     <div>
