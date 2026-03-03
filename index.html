@@ -207,22 +207,42 @@ tr:hover td{background:var(--card-hover);}
 .card-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.84rem;}
 .card-row:last-child{border-bottom:none;}
 /* ═══ CHECKLIST ═══════════════════════════════ */
-.cl-item{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border:1px solid var(--border);border-radius:9px;margin-bottom:6px;cursor:pointer;transition:all .15s;background:var(--surface2);}
-.cl-item:hover{border-color:var(--border2);background:var(--surface3);}
-.cl-item.ans-yes{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.06);}
-.cl-item.ans-no{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06);}
-.cl-item.ans-na{border-color:rgba(139,92,246,.25);background:rgba(139,92,246,.05);}
-.cl-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--t3);min-width:22px;padding-top:2px;flex-shrink:0;}
-.cl-text{flex:1;font-size:.88rem;line-height:1.6;padding-top:1px;}
-.cl-sub{font-size:.68rem;color:var(--t3);margin-top:2px;}
-.cl-btns{display:flex;gap:4px;flex-shrink:0;margin-top:1px;}
-.cl-btn{padding:10px 16px;border-radius:6px;border:1px solid var(--border2);background:var(--surface3);color:var(--t2);font-size:.84rem;font-weight:700;cursor:pointer;transition:all .15s;font-family:'JetBrains Mono',monospace;min-height:34px;}
-.cl-btn:hover{border-color:var(--border2);}
-.cl-btn.sel-yes{background:var(--green-dim);border-color:rgba(34,197,94,.4);color:var(--green);}
-.cl-btn.sel-no{background:var(--red-dim);border-color:rgba(239,68,68,.4);color:var(--red);}
-.cl-btn.sel-na{background:var(--purple-dim);border-color:rgba(168,85,247,.4);color:var(--purple);}
-.cl-remarks{width:100%;margin-top:6px;background:var(--input-bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--t1);font-size:.72rem;font-family:'Plus Jakarta Sans',sans-serif;outline:none;resize:none;min-height:44px;transition:border-color .15s;}
+/* ═══ CHECKLIST TABLE LAYOUT ═══ */
+.cl-table{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+.cl-table thead th{padding:10px 8px;font-size:.72rem;font-family:'JetBrains Mono',monospace;font-weight:800;text-transform:uppercase;letter-spacing:.1em;background:var(--surface3);border-bottom:2px solid var(--border);text-align:center;}
+.cl-table thead th:first-child{text-align:left;padding-left:14px;}
+.cl-table tbody tr{transition:background .1s;border-bottom:1px solid var(--border);}
+.cl-table tbody tr:last-child{border-bottom:none;}
+.cl-table tbody tr:hover{background:var(--surface2);}
+.cl-table tbody tr.ans-yes{background:rgba(34,197,94,.06);}
+.cl-table tbody tr.ans-no{background:rgba(239,68,68,.06);}
+.cl-table tbody tr.ans-na{background:rgba(139,92,246,.05);}
+.cl-table td{padding:11px 8px;vertical-align:middle;}
+.cl-table td:first-child{padding-left:14px;}
+.cl-num{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--t3);white-space:nowrap;}
+.cl-text{font-size:.86rem;line-height:1.55;color:var(--t1);}
+.cl-col-yes,.cl-col-no,.cl-col-na{width:72px;text-align:center;}
+/* Custom checkbox */
+.cl-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border2);background:var(--surface3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.cl-check:hover{border-color:var(--t3);}
+.cl-check.chk-yes{background:var(--green);border-color:var(--green);}
+.cl-check.chk-no{background:var(--red);border-color:var(--red);}
+.cl-check.chk-na{background:var(--purple);border-color:var(--purple);}
+.cl-check svg{display:none;width:13px;height:13px;}
+.cl-check.chk-yes svg,.cl-check.chk-no svg,.cl-check.chk-na svg{display:block;}
+/* Select-all header checkboxes */
+.cl-all-check{width:26px;height:26px;border-radius:7px;border:2px solid;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;font-size:.75rem;font-weight:800;}
+.cl-all-yes{border-color:var(--green);color:var(--green);background:var(--green-dim);}
+.cl-all-yes:hover{background:var(--green);color:#fff;}
+.cl-all-no{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+.cl-all-no:hover{background:var(--red);color:#fff;}
+.cl-all-na{border-color:var(--purple);color:var(--purple);background:var(--purple-dim);}
+.cl-all-na:hover{background:var(--purple);color:#fff;}
+.cl-all-clear{border-color:var(--t3);color:var(--t3);background:var(--surface3);font-size:.62rem;}
+.cl-all-clear:hover{background:var(--t3);color:#fff;}
+.cl-remarks{width:100%;margin-top:5px;background:var(--input-bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--t1);font-size:.72rem;font-family:'Plus Jakarta Sans',sans-serif;outline:none;resize:none;min-height:38px;transition:border-color .15s;}
 .cl-remarks:focus{border-color:var(--blue);}
+.cl-section-row td{background:var(--surface3);font-size:.72rem;font-family:'JetBrains Mono',monospace;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);padding:8px 14px;border-bottom:1px solid var(--border);}
 .cl-section{background:var(--surface3);border:1px solid var(--border);border-radius:7px;padding:8px 12px;margin-bottom:6px;font-size:.75rem;font-weight:700;color:var(--t2);letter-spacing:.02em;}
 /* ═══ PROGRESS ════════════════════════════════ */
 .prog-wrap{margin-bottom:14px;}
@@ -556,10 +576,14 @@ canvas{display:block;}
         <button class="nav-btn nav-sub" onclick="navigate('assets');setAssetFilter('Fixed Asset')" id="nav-assets-fa"><span class="nav-icon">🏗️</span><span class="nav-lbl">Fixed Assets</span></button>
         <button class="nav-btn nav-sub" onclick="navigate('assets');setAssetFilter('LVA')" id="nav-assets-lva"><span class="nav-icon">📦</span><span class="nav-lbl">Low Value Assets</span></button>
       </div>
-      <div class="nav-section">WSH</div>
-      <button class="nav-btn" onclick="navigate('wsh-daily')" id="nav-wsh-daily"><span class="nav-icon">📅</span><span class="nav-lbl">Daily Checklist</span><span class="nav-badge" id="badge-daily" style="display:none">!</span></button>
-      <button class="nav-btn" onclick="navigate('wsh-monthly')" id="nav-wsh-monthly"><span class="nav-icon">📆</span><span class="nav-lbl">Monthly Checklist</span></button>
-      <button class="nav-btn" onclick="navigate('wsh-yearly')" id="nav-wsh-yearly"><span class="nav-icon">📊</span><span class="nav-lbl">Hazard Checklist</span></button>
+      <div class="nav-section">WSH Related</div>
+      <!-- WSH expandable group -->
+      <button class="nav-btn" onclick="toggleSubNav('wsh-sub')" id="nav-wsh"><span class="nav-icon">🛡️</span><span class="nav-lbl">WSH</span><span class="nav-lbl nav-sub-arrow" id="wsh-sub-arrow" style="flex:0;margin-left:auto;font-size:.7rem;transition:transform .2s">›</span></button>
+      <div class="sub-nav" id="wsh-sub">
+        <button class="nav-btn nav-sub" onclick="navigate('wsh-daily')" id="nav-wsh-daily"><span class="nav-icon">📅</span><span class="nav-lbl">Daily</span><span class="nav-badge" id="badge-daily" style="display:none">!</span></button>
+        <button class="nav-btn nav-sub" onclick="navigate('wsh-monthly')" id="nav-wsh-monthly"><span class="nav-icon">📆</span><span class="nav-lbl">Monthly</span></button>
+        <button class="nav-btn nav-sub" onclick="navigate('wsh-yearly')" id="nav-wsh-yearly"><span class="nav-icon">📊</span><span class="nav-lbl">Yearly</span></button>
+      </div>
       <button class="nav-btn" onclick="navigate('firstaid')" id="nav-firstaid"><span class="nav-icon">🩹</span><span class="nav-lbl">First Aid</span><span class="nav-badge amber" id="badge-fa" style="display:none">!</span></button>
       <button class="nav-btn" onclick="navigate('chemicals')" id="nav-chemicals"><span class="nav-icon">🧪</span><span class="nav-lbl">Chemicals SDS</span></button>
       <button class="nav-btn" onclick="navigate('riskassessment')" id="nav-riskassessment"><span class="nav-icon">⚠️</span><span class="nav-lbl">Risk Assessment</span></button>
@@ -978,10 +1002,21 @@ function navigate(page){
   if(nb)nb.classList.add('active');
   const bb=document.getElementById('bnav-'+page);
   if(bb)bb.classList.add('active');
+  // auto-expand WSH sub-nav when any WSH page is active, and highlight parent
+  if(page.startsWith('wsh-')){
+    const wshSub=document.getElementById('wsh-sub');
+    const wshArrow=document.getElementById('wsh-sub-arrow');
+    if(wshSub&&!wshSub.classList.contains('open')){
+      wshSub.classList.add('open');
+      if(wshArrow)wshArrow.style.transform='rotate(90deg)';
+    }
+    const wshBtn=document.getElementById('nav-wsh');
+    if(wshBtn)wshBtn.classList.add('active');
+  }
   const titles={
     dashboard:'Operations Dashboard',assets:'Asset Management',
     'wsh-daily':'Daily Safety Checklist','wsh-monthly':'Monthly Safety Checklist',
-    'wsh-yearly':'Hazard Identification Checklist',
+    'wsh-yearly':'Yearly WSH Checklist',
     firstaid:'First Aid Inventory',maintenance:'Maintenance & Downtime',
     analytics:'Analytics & Predictive PPM',staff:'Staff Management',
     facilities:'Facilities Administration',auditlog:'Audit Log',
@@ -1122,7 +1157,7 @@ const MONTHLY_CHECKLIST = [
   {id:'m17',text:'All machinery / equipment is SP property and is approved to be in the workshop.'},
 ];
 
-// Yearly = Hazard Identification Checklist (Yes/No/NA + Remarks)
+// Yearly WSH Checklist — Hazard Identification (Yes/No/NA + Remarks)
 const YEARLY_CHECKLIST = [
   {section:'1. Placement of Machinery',items:[
     {id:'y1a',text:'Inadequate, improper or missing operating instructions for machinery'},
@@ -1270,13 +1305,13 @@ function renderWSH(root, period){
     }
   } else {
     dateKey=yearKey();
-    label=`Hazard Identification — ${dateKey} — ${currentFacility}`;
+    label=`Yearly — ${dateKey} — ${currentFacility}`;
     checklist=null; // Yearly uses sections
     const lastKey=Object.keys(DB.wshChecks).filter(k=>k.startsWith(`${currentFacility}-yearly-`)&&k!==getCheckKey(period,dateKey)&&DB.wshChecks[k].submitted).sort().pop();
     if(lastKey){
       const ly=parseInt(lastKey.split('-').slice(-1)[0]);
       const cy=new Date().getFullYear();
-      if(cy<=ly){canSubmit=false;lockMsg=`Hazard checklist already submitted for ${ly}.`;}
+      if(cy<=ly){canSubmit=false;lockMsg=`Yearly WSH checklist already submitted for ${ly}.`;}
     }
   }
 
@@ -1289,21 +1324,17 @@ function renderWSH(root, period){
   root.innerHTML=`
   <div class="cl-form-banner">
     <div>
-      <div class="cl-form-title">${isYearly?'Hazard Identification Checklist for Machinery & Equipment':(isMonthly?'Monthly Workshop Safety Checklist':'Daily Workshop Safety Checklist')}</div>
+      <div class="cl-form-title">${isYearly?'Yearly WSH Checklist — Hazard Identification for Machinery & Equipment':(isMonthly?'Monthly Workshop Safety Checklist':'Daily Workshop Safety Checklist')}</div>
       <div class="cl-form-meta">Venue: ${currentFacility} &nbsp;·&nbsp; ${label} ${state.submitted?`<span style="color:var(--green);margin-left:8px">✓ Submitted by ${esc(state.submittedBy)}</span>`:''}</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       ${isMonthly&&!canSubmit?`<span class="pill pill-yellow">🔒 Locked</span>`:''}
-      ${wshReadOnly?'':`<button class="btn btn-success btn-sm" onclick="checkAllYes('${period}','${dateKey}')">✅ All Yes</button>
-      <button class="btn btn-danger btn-sm" onclick="checkAllNo('${period}','${dateKey}')">✖ All No</button>
-      <button class="btn btn-sec btn-sm" onclick="checkAllNA('${period}','${dateKey}')">— All N/A</button>
-      <button class="btn btn-warn btn-sm" onclick="checkClear('${period}','${dateKey}')">🗑 Clear</button>
-      ${state.submitted?`<button class="btn btn-teal btn-sm" onclick="duplicateWSH('${period}')">📋 Duplicate to Next</button>`:''}`}
+      ${state.submitted?`<button class="btn btn-teal btn-sm" onclick="duplicateWSH('${period}')">📋 Duplicate to Next</button>`:''}
       <button class="btn btn-sec btn-sm" onclick="exportWSH('${period}','${dateKey}')">⬇ Export</button>
     </div>
   </div>
   ${wshReadOnly?`<div class="alert al-warn" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <div><strong>🔒 ${currentFacility} — Not your assigned lab.</strong><div style="font-size:.8rem;margin-top:2px">This ${isDaily?'Daily':isMonthly?'Monthly':'Hazard'} checklist belongs to the ${currentFacility} in-charge. Unlock to fill in on behalf of a colleague.</div></div>
+    <div><strong>🔒 ${currentFacility} — Not your assigned lab.</strong><div style="font-size:.8rem;margin-top:2px">This ${isDaily?'Daily':isMonthly?'Monthly':'Yearly'} checklist belongs to the ${currentFacility} in-charge. Unlock to fill in on behalf of a colleague.</div></div>
     <button class="btn btn-warn btn-sm" onclick="unlockWSHFac('${currentFacility}')">🔓 Unlock to Edit</button>
   </div>`:''}
   ${lockMsg?`<div class="alert al-warn">🔒 ${esc(lockMsg)}</div>`:''}
@@ -1312,15 +1343,39 @@ function renderWSH(root, period){
     <div class="prog-meta"><span>${answered}/${items.length} answered</span><span>${pct}%</span></div>
     <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${pct===100?'var(--green)':pct>60?'var(--blue)':'var(--yellow)'}"></div></div>
   </div>
-  <div id="wsh-items">
-  ${isYearly
-    ? YEARLY_CHECKLIST.map(sec=>`
-      <div class="cl-section">${esc(sec.section)}</div>
-      ${sec.items.map(item=>renderWSHItem(item,state,true)).join('')}
-      `).join('')
-    : checklist.map(item=>renderWSHItem(item,state,false)).join('')
-  }
-  </div>
+  <table class="cl-table" id="wsh-items">
+    <thead><tr>
+      <th style="width:40px"></th>
+      <th style="text-align:left">Checklist Item</th>
+      <th class="cl-col-yes">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="color:var(--green)">YES</span>
+          ${wshReadOnly?'':`<button class="cl-all-check cl-all-yes" onclick="bulkSetWSH('${period}','${dateKey}','yes')" title="Set all to YES">✓</button>`}
+        </div>
+      </th>
+      <th class="cl-col-no">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="color:var(--red)">NO</span>
+          ${wshReadOnly?'':`<button class="cl-all-check cl-all-no" onclick="bulkSetWSH('${period}','${dateKey}','no')" title="Set all to NO">✗</button>`}
+        </div>
+      </th>
+      <th class="cl-col-na">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <span style="color:var(--purple)">N/A</span>
+          ${wshReadOnly?'':`<button class="cl-all-check cl-all-na" onclick="bulkSetWSH('${period}','${dateKey}','na')" title="Set all to N/A">—</button>`}
+        </div>
+      </th>
+    </tr></thead>
+    <tbody>
+    ${isYearly
+      ? YEARLY_CHECKLIST.map(sec=>`
+        <tr class="cl-section-row"><td colspan="5">${esc(sec.section)}</td></tr>
+        ${sec.items.map(item=>renderWSHItem(item,state,true)).join('')}
+        `).join('')
+      : checklist.map(item=>renderWSHItem(item,state,false)).join('')
+    }
+    </tbody>
+  </table>
   <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:14px;border-top:1px solid var(--border)">
     ${wshReadOnly?`<span style="color:var(--t3);font-size:.8rem">🔒 Read-only — unlock above to submit</span>`:`
     ${canSubmit&&!state.submitted?`<button class="btn btn-pri" onclick="submitWSH('${period}','${dateKey}')" ${answered===0?'disabled':''}>✓ Submit & Sign Off</button>`:''}
@@ -1333,23 +1388,41 @@ function renderWSH(root, period){
   </div>`;
 }
 
+// SVG icons for checkboxes
+const TICK_SVG = `<svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,7 5.5,11 12,3"/></svg>`;
+const CROSS_SVG = `<svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="3" x2="11" y2="11"/><line x1="11" y1="3" x2="3" y2="11"/></svg>`;
+const DASH_SVG = `<svg viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="7" x2="11" y2="7"/></svg>`;
+
 function renderWSHItem(item, state, hasRemarks){
   const ans=state.answers[item.id]||'';
   const rem=state.remarks?.[item.id]||'';
-  const cls=ans==='yes'?'ans-yes':ans==='no'?'ans-no':ans==='na'?'ans-na':'';
-  const roStyle=wshReadOnly?'pointer-events:none;opacity:.75;':'';
-  return`<div class="cl-item ${cls}" id="cli-${item.id}" style="${roStyle}">
-    <div class="cl-num">${item.id.replace(/[a-z]/,'').replace(/\d+/,'').length?item.id:item.id}</div>
-    <div style="flex:1">
-      <div class="cl-text">${esc(item.text)}</div>
-      ${hasRemarks?`<textarea class="cl-remarks" placeholder="Remarks (optional)..." onchange="setWSHRemark(event,'${item.id}')" rows="1">${esc(rem)}</textarea>`:''}
-    </div>
-    <div class="cl-btns">
-      <button class="cl-btn ${ans==='yes'?'sel-yes':''}" onclick="setWSHAns(event,'${item.id}','yes')">YES</button>
-      <button class="cl-btn ${ans==='no'?'sel-no':''}" onclick="setWSHAns(event,'${item.id}','no')">NO</button>
-      <button class="cl-btn ${ans==='na'?'sel-na':''}" onclick="setWSHAns(event,'${item.id}','na')">N/A</button>
-    </div>
-  </div>`;
+  const rowCls=ans==='yes'?'ans-yes':ans==='no'?'ans-no':ans==='na'?'ans-na':'';
+  const roAttr=wshReadOnly?'style="pointer-events:none;opacity:.78"':'';
+  const chkY=`cl-check${ans==='yes'?' chk-yes':''}`;
+  const chkN=`cl-check${ans==='no'?' chk-no':''}`;
+  const chkA=`cl-check${ans==='na'?' chk-na':''}`;
+  return`<tr class="${rowCls}" id="cli-${item.id}" ${roAttr}>
+    <td><span class="cl-num">${item.id}</span></td>
+    <td class="cl-text">
+      ${esc(item.text)}
+      ${hasRemarks?`<div><textarea class="cl-remarks" placeholder="Remarks (optional)..." onchange="setWSHRemark(event,'${item.id}')" rows="1">${esc(rem)}</textarea></div>`:''}
+    </td>
+    <td class="cl-col-yes" onclick="setWSHAns(event,'${item.id}','yes')">
+      <div style="display:flex;justify-content:center">
+        <div class="${chkY}">${ans==='yes'?TICK_SVG:''}</div>
+      </div>
+    </td>
+    <td class="cl-col-no" onclick="setWSHAns(event,'${item.id}','no')">
+      <div style="display:flex;justify-content:center">
+        <div class="${chkN}">${ans==='no'?CROSS_SVG:''}</div>
+      </div>
+    </td>
+    <td class="cl-col-na" onclick="setWSHAns(event,'${item.id}','na')">
+      <div style="display:flex;justify-content:center">
+        <div class="${chkA}">${ans==='na'?DASH_SVG:''}</div>
+      </div>
+    </td>
+  </tr>`;
 }
 
 function setWSHAns(e,itemId,val){
@@ -1360,15 +1433,18 @@ function setWSHAns(e,itemId,val){
   if(!DB.wshChecks[key])DB.wshChecks[key]={answers:{},remarks:{},submitted:false,submittedBy:'',submittedAt:''};
   DB.wshChecks[key].answers[itemId]=val;
   dbSave();
-  // update UI
-  const item=document.getElementById('cli-'+itemId);
-  if(item){
-    item.className='cl-item '+(val==='yes'?'ans-yes':val==='no'?'ans-no':'ans-na');
-    item.querySelectorAll('.cl-btn').forEach(b=>{b.className='cl-btn';});
-    const btns=item.querySelectorAll('.cl-btn');
-    if(btns[0])btns[0].className='cl-btn '+(val==='yes'?'sel-yes':'');
-    if(btns[1])btns[1].className='cl-btn '+(val==='no'?'sel-no':'');
-    if(btns[2])btns[2].className='cl-btn '+(val==='na'?'sel-na':'');
+  // update UI — row highlight + checkboxes
+  const row=document.getElementById('cli-'+itemId);
+  if(row){
+    row.className=val==='yes'?'ans-yes':val==='no'?'ans-no':val==='na'?'ans-na':'';
+    const checks=row.querySelectorAll('.cl-check');
+    const icons=[TICK_SVG,CROSS_SVG,DASH_SVG];
+    const vals=['yes','no','na'];
+    const clss=['chk-yes','chk-no','chk-na'];
+    checks.forEach((c,i)=>{
+      c.className='cl-check'+(val===vals[i]?' '+clss[i]:'');
+      c.innerHTML=val===vals[i]?icons[i]:'';
+    });
   }
   // update progress
   const p=period==='daily'?DAILY_CHECKLIST:period==='monthly'?MONTHLY_CHECKLIST:YEARLY_CHECKLIST.flatMap(s=>s.items);
